@@ -15,6 +15,7 @@ JSON_DATA = {
     'annotations': [
         {
             'question_id': i,
+            'question_type': f'what this is {i}',
             'answers': [
                 {'answer': word + f'{i}'}
                 for word in 'test sample example'.split()
@@ -43,20 +44,23 @@ class LoadDatasetTest(unittest.TestCase):
 
         data = self.vqa.dataset[0]
 
-        self.assertEqual(len(data), 3)
+        self.assertEqual(len(data), 4)
         # check question
         self.assertEqual(data[0], JSON_DATA['questions'][0]['question'])
+
+        # check question type
+        self.assertEqual(data[1], JSON_DATA['annotations'][0]['question_type'])
 
         # chekc answers
         target_answers = [
             d['answer'] for d in JSON_DATA['annotations'][0]['answers']
         ]
-        self.assertEqual(data[1], target_answers)
+        self.assertEqual(data[2], target_answers)
 
         # check image path
         target_image = 'COCO_train2014_{:012d}.jpg' \
             .format(JSON_DATA["questions"][0]["image_id"])
-        self.assertTrue(data[2].endswith(target_image))
+        self.assertTrue(data[3].endswith(target_image))
 
     @patch('main.utils.loader.json.load')
     @patch('builtins.open', new_callabel=mock_open)
@@ -86,6 +90,7 @@ class LoadDatasetTest(unittest.TestCase):
 
         data_size = len(self.vqa)
         self.assertEqual(data_size, target_data_size)
+        self.assertEqual(len(self.vqa._dataset[0]), 4)
 
 
 if __name__ == '__main__':

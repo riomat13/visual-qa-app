@@ -74,8 +74,9 @@ class VQA(object):
         print(f'Saved data to {filepath}')
 
     def _get_answers(self, data):
+        question_type = data['question_type']
         answers = [d['answer'] for d in data['answers']]
-        return answers
+        return question_type, answers
 
     def _get_question(self, data):
         img_path = self._get_image(data['image_id'])
@@ -98,7 +99,7 @@ class VQA(object):
         for q, a in zip(questions, answers):
             # check if the question_id is the same
             if q[0] == a[0]:
-                dataset.append((q[1][0], a[1], q[1][1]))
+                dataset.append((q[1][0], a[1][0], a[1][1], q[1][1]))
             else:
                 raise RuntimeWarning(
                     f'question_id does not match: {q[0]} != {a[0]}'
@@ -129,7 +130,7 @@ class VQA(object):
             repeat: boolean
                 repeat to generate data after cosumed all data
         Return:
-            generator: questions, answers, images(paths)
+            generator: questions, question_types, answers, images(paths)
         """
         if not self._generatable:
             raise RuntimeError('Must run load_data() first')
