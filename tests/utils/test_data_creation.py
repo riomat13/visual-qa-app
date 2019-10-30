@@ -4,7 +4,7 @@
 import unittest
 from unittest.mock import patch, mock_open
 
-from main.utils.loader import VQA
+from main.utils.loader import VQA, fetch_question_types
 
 
 JSON_DATA = {
@@ -91,6 +91,12 @@ class LoadDatasetTest(unittest.TestCase):
         data_size = len(self.vqa)
         self.assertEqual(data_size, target_data_size)
         self.assertEqual(len(self.vqa._dataset[0]), 4)
+
+    def test_fetch_class_list(self):
+        # compare to abstract question types which has 81 types
+        target_class_num = 81
+        classes = fetch_question_types()
+        self.assertEqual(len(classes), target_class_num)
 
 
 if __name__ == '__main__':

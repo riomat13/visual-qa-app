@@ -12,6 +12,24 @@ import json
 from main.settings import ROOT_DIR
 
 
+def fetch_question_types(data_dir=None):
+    """Fetch class types from a text in VQA dataset.
+    Return a list of str
+    """
+    data_dir = data_dir or f'{ROOT_DIR}/data/QuestionTypes'
+    filename = 'abstract_v002_question_types.txt'
+    file_path = os.path.join(data_dir, filename)
+
+    classes = []
+
+    with open(file_path, 'r') as f:
+        for line in f:
+            classes.append(line.strip())
+
+    print('Total Number of Classes:', len(classes))
+    return classes
+
+
 class VQA(object):
     """
     Load data from VQA and COCO dataset and generate data.
