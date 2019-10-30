@@ -30,7 +30,7 @@ class MobileNetEncoderTest(unittest.TestCase):
     def test_process_and_output_with_correct_shape(self):
         mobilenet = create_mobilenet_encoder()
         out = mobilenet(np.expand_dims(TEST_IMG, axis=0))
-        self.assertEqual(out.shape, (1, 128))
+        self.assertEqual(out.shape, (1, 1024))
 
 
 class ImageEncoderTest(unittest.TestCase):
@@ -40,7 +40,7 @@ class ImageEncoderTest(unittest.TestCase):
         mock_load_image.return_value = TEST_IMG
         encoder = ImageEncoder()
         feature = encoder.get_image_features('path/to/img')
-        self.assertEqual(feature.shape, (128,))
+        self.assertEqual(feature.shape, (1024,))
 
     @patch('main.models.images.load_image')
     def test_encoding_multiple_images(self, mock_load_image):
@@ -49,7 +49,7 @@ class ImageEncoderTest(unittest.TestCase):
         encoder = ImageEncoder()
         data_paths = ['path/to/img'] * test_data_size
         feature = encoder.get_imgs_features(data_paths)
-        self.assertEqual(feature.shape, (test_data_size, 128,))
+        self.assertEqual(feature.shape, (test_data_size, 1024,))
 
 
 if __name__ == '__main__':
