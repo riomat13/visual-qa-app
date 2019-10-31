@@ -62,6 +62,10 @@ class LoadDatasetTest(unittest.TestCase):
             .format(JSON_DATA["questions"][0]["image_id"])
         self.assertTrue(data[3].endswith(target_image))
 
+    def test_generator_raise_error(self):
+        with self.assertRaises(RuntimeError):
+            next(self.vqa.data_generator())
+
     @patch('main.utils.loader.json.load')
     @patch('builtins.open', new_callabel=mock_open)
     def test_generating_batch_dataset(self, mock_open, mock_json_load):
@@ -80,9 +84,27 @@ class LoadDatasetTest(unittest.TestCase):
             count += 1
             self.assertGreater(len(batch[0]), 0)
             total_data += len(batch[0])
+            # batch contains (quesions, question_types, answers, images)
+            self.assertEqual(len(batch), 4)
 
         self.assertEqual(count, target_steps)
         self.assertEqual(total_data, target_data_size)
+
+    @patch('main.utils.loader.json.load')
+    @patch('builtins.open', new_callabel=mock_open)
+    def test_generating_dataset_once(self, mock_open, mock_json_load):
+        mock_json_load.return_value = JSON_DATA
+        batch_size = 4
+
+        target_data_size = len(JSON_DATA['questions'])
+        self.vqa.load_data(num_data=target_data_size)
+
+        dataset = next(self.vqa.data_generator())
+
+        # batch contains (quesions, question_types, answers, images)
+        self.assertEqual(len(dataset), 4)
+
+        self.assertEqual(len(dataset[0]), target_data_size)
 
     def test_load_dataset_and_check_datasize(self):
         target_data_size = 10

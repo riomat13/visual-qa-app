@@ -5,6 +5,7 @@
 #
 
 import os.path
+import warnings
 import time
 import random
 import json
@@ -77,10 +78,10 @@ class VQA(object):
         dataset = []
 
         # always output the same dataset
-        for img_data in data[data_type][:num_data]:
+        for elem in data[data_type][:num_data]:
             # data is pivotted by question_id
-            question_id = img_data['question_id']
-            data = data_extractor(img_data)
+            question_id = elem['question_id']
+            data = data_extractor(elem)
 
             dataset.append((question_id, data))
 
@@ -107,6 +108,7 @@ class VQA(object):
         return img_path
 
     def load_data(self, num_data=-1):
+        # TODO: this has overhead since this loads entire data once
         start = time.time()
         dataset = []
         questions = self._create_dataset(
@@ -119,8 +121,9 @@ class VQA(object):
             if q[0] == a[0]:
                 dataset.append((q[1][0], a[1][0], a[1][1], q[1][1]))
             else:
-                raise RuntimeWarning(
-                    f'question_id does not match: {q[0]} != {a[0]}'
+                warnings.warn(
+                    f'question_id does not match: {q[0]} != {a[0]}',
+                    RuntimeWarning
                 )
 
         self._dataset = dataset
@@ -134,15 +137,17 @@ class VQA(object):
 
     @classmethod
     def load_from_json(cls, filepath):
-        data = json.load(filepath)
+        # TODO
+        pass
 
-    def data_generator(self, batch_size=32, shuffle=True, repeat=False):
+    def data_generator(self, batch_size=None, shuffle=True, repeat=False):
         """
         Genarate data.
 
         Args:
             batch_size: int
                 data size to generate in each iteration
+                if None, generate all data at once
             shuffle: boolean
                 shuffle data if True
             repeat: boolean
@@ -156,15 +161,20 @@ class VQA(object):
         # flag to check if repeat generating dataset
         keep = True
 
-        num_steps = (len(self) - 1) // batch_size + 1
+        if batch_size is not None:
+            num_steps = (len(self._dataset) - 1) // batch_size + 1
 
         while keep:
             if shuffle:
                 random.shuffle(self._dataset)
-            for step in range(num_steps):
-                start_idx = step * batch_size
-                data = self._dataset[start_idx:start_idx+batch_size]
-                # return in (questions, answers, image_paths) order
-                yield list(zip(*data))
+            if batch_size is not None:
+                for step in range(num_steps):
+                    start_idx = step * batch_size
+                    data = self._dataset[start_idx:start_idx+batch_size]
+                    # return in (questions, answers, image_paths) order
+                    yield list(zip(*data))
+            else:
+                # if not specified data size, generate all data
+                yield list(zip(*self._dataset))
 
             keep &= repeat
