@@ -7,10 +7,12 @@
 
 import os
 import time
+import json
 
 import numpy as np
 import tensorflow as tf
 
+from main.settings import ROOT_DIR
 from main.models import QuestionTypeClassification
 from main.utils.loader import VQA, fetch_question_types
 from main.utils.preprocess import text_processor, one_hot_converter
@@ -20,13 +22,13 @@ from main.metrics import calculate_accuracy
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 # dataset
-data_size = 300
+data_size = 30000
 
 # parameters
 embedding_dim = 256
-hidden_units = 32
+hidden_units = 64
 
-batch_size = 16
+batch_size = 32
 epochs = 2
 
 # initialize labels
@@ -48,7 +50,7 @@ def data_generator(inputs, labels, batch_size=batch_size):
         yield batch_inputs, batch_labels
 
 
-def main(*, training=True, model_data_path=None, val=0.2):
+def main(*, training=True, save_to=None, load_from=None, val=0.2):
     global data_size
     global num_classes
     global processor
@@ -60,8 +62,16 @@ def main(*, training=True, model_data_path=None, val=0.2):
         q2id[q] if q in q2id else q2id['none of the above']
         for q in question_types]
 
-    model = None
+    # set text processor
+    if load_from is not None:
+        # has to reuse past tokenizer for consistency
+        with open('./.env/tokenizer_config.json', 'r') as f:
+            cfg = f.read()
 
+        processor = text_processor(cfg, from_json=True)
+    
+    # build processor based on training dataset
+    # if processor is not reused
     if training:
         # preprocessing dataset
         # split train and test set
@@ -72,7 +82,24 @@ def main(*, training=True, model_data_path=None, val=0.2):
         inputs_val = questions[train_size:]
 
         # process inputs
-        processor = text_processor(inputs_train)
+        # if tokenizer is not loaded, create new one
+        if processor is None:
+            processor = text_processor(inputs_train)
+
+    # iinitialize model
+    model = QuestionTypeClassification(
+        embedding_dim=embedding_dim,
+        units=hidden_units,
+        vocab_size=processor.vocab_size+1,  # need to add 1 due to Embedding implementation
+        num_classes=num_classes
+    )
+
+    # set initial weights to the model
+    if load_from is not None:
+        model.load_weights(load_from)
+
+    # TRAINING STEP
+    if training:
         inputs_train = processor(inputs_train)
         inputs_val = processor(inputs_val)
 
@@ -82,13 +109,6 @@ def main(*, training=True, model_data_path=None, val=0.2):
         labels_train = labels[:train_size]
         labels_val = labels[train_size:]
 
-        # iinitialize model
-        model = QuestionTypeClassification(
-            embedding_dim=embedding_dim,
-            units=hidden_units,
-            vocab_size=processor.vocab_size+1,  # need to add 1 due to Embedding implementation
-            num_classes=num_classes
-        )
         loss = 0
         optimizer = tf.keras.optimizers.Adam()
 
@@ -136,11 +156,28 @@ def main(*, training=True, model_data_path=None, val=0.2):
                     batch_loss = batch_loss.numpy()
                     print('  Batch:', batch)
                     # TODO: add accuracy
-                    print('    Loss: {:.4f} Training accuracy: {:.4f} Validation accuracy: {:.4f} Time(batch): {:.4f}s'
+                    print('    Loss: {:.4f}  Accuracy(Train): {:.4f}  Accuracy(Val): {:.4f}  Time(batch): {:.4f}s'
                             .format(batch_loss, accuracy, accuracy_val, end-st))
+
+        print('Saving models...')
+        # save tokenizer info for resuse
+        processor.to_json('./.env/tokenizer_config.json')
+        model.save_weights(save_to)
+        print('Saved!!')
 
         print()
         print('Training completed')
+
+    else:
+        # if not training mode test with all given data
+        st = time.time()
+        inputs = processor(questions)
+        out = model(inputs)
+        labels = tf.Variable(labels, dtype=tf.int32)
+        accuracy = calculate_accuracy(out, labels)
+        end = time.time()
+        print('Evaluated score: Accuracy: {:.4f} Time: {:.4f}s'
+                .format(accuracy, end-st))
 
     return model
 
@@ -152,7 +189,11 @@ if __name__ == '__main__':
             description='Run question type classification model')
     parser.add_argument(
         '--no-train', default=False, action='store_true',
-        help='not run training step'
+        help="not run training step (must set '-p', otherwise run training)"
+    )
+    parser.add_argument(
+        '-s', '--save', type=str, default='weights',
+        help='file name to save as checkpoint'
     )
     parser.add_argument(
         '-p', '--path', type=str, default=None,
@@ -166,14 +207,15 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     interactive = args.interactive
-    model_data_path = args.path
-    no_train = args.no_train
+    load_from = args.path
 
-    if no_train:
-        print('Currently not implemented')
-        print('It will start from training step')
+    # if set no-train, not run training step
+    training = True ^ args.no_train
 
-    model = main(model_data_path=model_data_path)
+    file_name = args.save
+    save_to = f'{ROOT_DIR}/checkpoints/train/question_types/{file_name}'
+
+    model = main(training=training, load_from=load_from, save_to=save_to)
 
     if interactive:
         print()
@@ -187,7 +229,7 @@ if __name__ == '__main__':
 
             # avoid to be broken by inputs with only unseen word nor empty
             # however this will appear DeprecatedWarning
-            if not sentence:
+            if not np.any(sentence):
                 sentence = np.array([[0]])
 
             pred = model(sentence)
@@ -196,4 +238,5 @@ if __name__ == '__main__':
             print()
             sentence = input("  Input sentece(if quit, type 'q'): ").strip()
 
+    print()
     print('Closing...')
