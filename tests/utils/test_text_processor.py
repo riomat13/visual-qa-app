@@ -48,6 +48,32 @@ class TextProcessorTest(unittest.TestCase):
         processed = processor(new_sample)
         self.assertEqual(len(processed[0]), len(new_sample[0].split()))
 
+    def test_processed_sentence_lengths_are_same(self):
+        sample_text = [
+            'sample text sentence',
+            'This is another sentence',
+            'This is not processed yet'
+        ]
+        processor = text_processor(sample_text)
+        examples = [
+            'this should be processed by tokenizer',
+            'this is also be processed'
+        ]
+        processed = processor(examples)
+        self.assertEqual(len(processed[0]), len(processed[1]))
+
+    def test_reuse_text_processor_by_json(self):
+        sample_text = ['sample text sentence']
+        processor = text_processor(sample_text)
+        target = processor(sample_text)
+        json_cfg = processor.to_json()
+
+        # rebuild with json config
+        processor_from_json = text_processor(json_cfg, from_json=True)
+        processed = processor_from_json(sample_text)
+
+        self.assertTrue(np.all(processed == target))
+
     def test_one_hot_encoding(self):
         n = 5
         test_data = list(range(n))
