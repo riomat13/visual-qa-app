@@ -3,7 +3,11 @@
 
 import unittest
 
-from main.utils.preprocess import text_processor
+import random
+
+import numpy as np
+
+from main.utils.preprocess import text_processor, one_hot_converter
 
 
 class TextProcessorTest(unittest.TestCase):
@@ -43,6 +47,19 @@ class TextProcessorTest(unittest.TestCase):
         # updated vocab so that it has to match the length
         processed = processor(new_sample)
         self.assertEqual(len(processed[0]), len(new_sample[0].split()))
+
+    def test_one_hot_encoding(self):
+        n = 5
+        test_data = list(range(n))
+        random.shuffle(test_data)
+
+        matrix = one_hot_converter(test_data, C=n)
+
+        self.assertEqual(matrix.shape, (n, n))
+        self.assertEqual(np.sum(matrix), n)
+
+        for vec, val in zip(matrix, test_data):
+            self.assertEqual(vec[val], 1)
 
 
 if __name__ == '__main__':

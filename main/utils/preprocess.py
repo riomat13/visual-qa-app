@@ -3,8 +3,23 @@
 
 import os
 
+import numpy as np
+
 from keras_preprocessing.text import Tokenizer
 from keras_preprocessing.sequence import pad_sequences
+
+
+def one_hot_converter(labels, C):
+    """Convert 1-d array of labels to 2-d matrix consist of one-hot vectors of labels.
+    Args:
+        labels: list or numpy.ndarray
+        C: int
+            number of classes
+    """
+    data_size = len(labels)
+    vector = np.zeros((data_size, C), dtype=np.int8)
+    vector[np.arange(data_size), labels] = 1
+    return vector
 
 
 def text_processor(sentences):
