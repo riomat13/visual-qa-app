@@ -44,20 +44,22 @@ class QuestionTypeClassification(tf.keras.Model):
         # fetch number of class to be used as output for classification
         if num_classes is None:
             from main.utils.loader import fetch_question_types
-            num_classes = fetch_question_types()
+            num_classes = len(fetch_question_types())
 
         super(QuestionTypeClassification, self).__init__()
-        self.embedding = Embedding(vocab_size, units)
+        self.embedding = Embedding(vocab_size, embedding_dim)
         self.gru = GRU(units,
                        return_sequences=False,
                        recurrent_initializer='glorot_uniform')
         self.dense1 = Dense(units, activation='relu')
+        self.dense2 = Dense(256, activation='relu')
         self.out_layer = Dense(num_classes, activation='softmax')
 
     def call(self, sequences):
         x = self.embedding(sequences)
         x = self.gru(x)
         x = self.dense1(x)
+        x = self.dense2(x)
 
         # output shape = (batch_size, num_classes)
         x = self.out_layer(x)
