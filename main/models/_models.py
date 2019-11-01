@@ -8,33 +8,42 @@ from tensorflow.keras.layers import Dense, Embedding, GRU
 class Attention(tf.keras.Model):
     def __init__(self, units):
         super(Attention, self).__init__()
-        # FC for feature
+        # FC for input feature
         self.dense1 = Dense(units)
-        # FC for hidden state
+        # FC for hidden states from encoder
         self.dense2 = Dense(units)
         self.V = Dense(1)
 
-    def call(self, features, hidden_prev):
+    def call(self, features, hidden_outputs):
         """
-        features:    encoded features
-            shape = (batch_size, hidden, embedding_dim)
-        hidden_prev: previous hidden state
-            shape = (batch_size, hidden_size)
+        Args:
+            features:      encoded features
+                shape = (batch_size, hidden_size)
+            hidden_outputs: hidden outputs from encoder
+                shape = (batch_size, sequence_length, embedding_dim)
+        Returns:
+            context: context tensor
+                shape = (batch_size, hidden_size)
+            attention_weights: weights used for attention
+                shape = (batch_size, sequence_length, 1)
         """
         # expand dim to add time step axis => (batch_size, 1, hidden_size)
-        expanded_hidden = tf.expand_dims(hidden_prev, 1)
+        x = tf.expand_dims(features, 1)
 
         # weights to update feature importance
-        features = self.dense1(features)
-        hidden = self.dense2(expanded_hidden)
-        score = tf.nn.tanh(features + hidden)
+        x_encoded = self.dense1(x)
+        hidden_encoded = self.dense2(hidden_outputs)
+        score_ = tf.nn.tanh(x_encoded + hidden_encoded)
+        score = self.V(score_)
 
-        attention_weights = tf.nn.softmax(self.V(score), axis=1)
+        # normalize output score
+        attention_weights = tf.nn.softmax(score, axis=1)
 
         # update the feature weighted by importance
         # context shape = (batch_size, units)
-        context = attention_weights * features
+        context = attention_weights * hidden_outputs
         context = tf.reduce_sum(context, axis=1)
+
         return context, attention_weights
 
 
@@ -105,20 +114,20 @@ class Decoder(tf.keras.Model):
         self.output_layer = Dense(vocab_size)
         self.attention = Attention(units)
 
-    def call(self, sequences, features, hidden):
+    def call(self, x, features, encoded):
         # context shape = (batch_size, units)
-        context, attention_weights = self.attention(features, hidden)
-        x = self.embedding(sequences)
+        context, attention_weights = self.attention(features, encoded)
+        x = self.embedding(x)
 
         # concatenate sequence and attention weighted context
-        # shape => (batch_size, seq_length, embedding_dim + attention_units)
+        # shape => (batch_size, 1, embedding_dim + attention_units)
         x = tf.concat([tf.expand_dims(context, 1), x], axis=-1)
 
         x, state = self.gru(x)
 
-        # output shape => (batch_size, seq_length, units)
+        # output shape => (batch_size, 1, units)
         x = self.dense1(x)
-        # reshape to (batch_size * seq_length, units)
+        # reshape to (batch_size * 1, units)
         x = tf.reshape(x, (-1, x.shape[-1]))
 
         x = self.output_layer(x)

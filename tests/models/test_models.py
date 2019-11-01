@@ -24,15 +24,16 @@ class ModelOutputShapeTest(unittest.TestCase):
         # feature shape is (128,)
         batch_size = 4
         seq_length = 10
+        hidden_units = 128
 
         # encoded sequence shape (batch_size, time_steps, seq_len)
-        encoded = np.random.randn(batch_size, seq_length,  128)
-        hidden = np.random.randn(batch_size, 128)
+        input_ = np.random.randn(batch_size, hidden_units)
+        hidden_outputs = np.random.randn(batch_size, seq_length, hidden_units)
 
         units = 32
         model = Attention(units)
-        out, weights = model(encoded, hidden)
-        self.assertEqual(out.shape, (batch_size, units))
+        out, weights = model(input_, hidden_outputs)
+        self.assertEqual(out.shape, (batch_size, hidden_units))
         self.assertEqual(weights.shape, (batch_size, seq_length, 1))
 
     def test_questiontypeclassification_model(self):
