@@ -41,7 +41,6 @@ class ImageEncoder(object):
     Example:
         >>> imgs = ['data/img1.jpg', 'data/img2.jpg']
         >>> encoder = ImageEncoder()
-        >>> encoder.train(dataset)
         >>> features = encoder.get_imgs_features(imgs)
         >>> print(features.shape)
         (2, 128)

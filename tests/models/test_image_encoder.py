@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import os
+
 import unittest
 from unittest.mock import patch
 
@@ -11,6 +13,9 @@ from main.models.images import (
     create_mobilenet_encoder,
     ImageEncoder
 )
+
+# ignore tensorflow debug info
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 INPUT_SHAPE = (224, 224, 3)  # batch size = 1
 TEST_IMG = np.random.randint(0, 255, INPUT_SHAPE) \
