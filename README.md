@@ -4,13 +4,12 @@ This is a challenge to build Question Answering with Attention by images.
 All images are from [COCO](http://cocodataset.org/), and quesion/answer dataset is from [VQA](https://visualqa.org/).
 
 ## Requirements
-This model and app is running with these libraries. (haven't tested with other versions)
+This model and app is running with these libraries in following versions.
 
 ```python
 python==3.7
+numpy==1.17.3
 tensorflow==2.0
-flask==1.1.1
-SQLAlchemy==1.3.10
 ```
 
 ## 1st week - define the problem
@@ -31,12 +30,30 @@ In order to simplify the problem, Use *transfer learning* with `tf.keras.applica
 #### 2. Question type classification
 Use *RNN* to capture sentences information and apply simple classification.
 
-Apply *LSTM* to question sentence => output (class type is based on `data/QeustionTypes/mscoco_question_types.txt`)
+Apply *LSTM* to question sentence => output (class type is based on `https://github.com/GT-Vision-Lab/VQA/blob/master/QuestionTypes/mscoco_question_types.txt`)
+
+Since this is pretty simple task, it can achieve more than *98%* accuracy in validation step with simple network and 30000 dataset(24000 for training and 6000 for validation).
 
 #### 3. Question/Answering
 In encoder step, parse question sentence with *RNN*, whereas use *RNN with Attention* in decoder step.
-As target answer, use the answers data from dataset shown above, and 
+As target answer, load the answers data from dataset shown above. Each question has 10 ansewers and they will be used for training to be weighted importance since it may solve ambiguity.
 
+### Question Type Classification
+As initial step, we need to classify question types, and then pass the features (implement later) to decoder.
+Prepared question types are used for classification. This has be easy since quesions come from first few words of a question sentence.
+It can be done by checking first few words in sentences however, we can not be sure that questions are asked by following correct grammar nor withoud type therefore, build neural network to capture the feature and decide the most likely one is the question type to be used.
+This model is going to be pre-trained and use the weights at later model(decoding model).
+
+```python
+python run_questiontype_classification.py
+
+# if you want to test by your own sentence
+python run_questiontype_classification.py -i
+```
+
+### Web Application
+In order to access model, web API will be implemented, which is built with `flask`.
+This is for serving models created, therefore it may not be developed for UI, but just for API.
 
 ## 2nd week - build minimum model
 Build minimum vaiable product(MVP) model. Send data by API and return the results by `json` format.

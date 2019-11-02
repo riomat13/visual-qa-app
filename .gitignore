@@ -1,0 +1,28 @@
+# python byte codes
+__pycache__/
+*.pyc
+
+# environment
+.env/
+
+# data / database
+data/
+checkpoints/
+*/migrations/versions/
+
+# logs
+logs/
+*.log
+*log.txt
+log*.txt
+
+# config files
+*config*
+*.cfg
+*.conf
+
+# Unittest
+.coverage
+
+# Jupyter Notebook
+.ipynb_checkpoints
