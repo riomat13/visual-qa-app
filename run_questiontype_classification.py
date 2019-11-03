@@ -15,7 +15,7 @@ import tensorflow as tf
 from main.settings import ROOT_DIR
 from main.models import QuestionTypeClassification
 from main.utils.loader import VQA, fetch_question_types
-from main.utils.preprocess import text_processor, one_hot_converter
+from main.utils.preprocess import text_processor
 from main.metrics import calculate_accuracy
 
 # ignore tensorflow debug info
@@ -104,7 +104,7 @@ def main(*, training=True, save_to=None, load_from=None, val=0.2):
         inputs_val = processor(inputs_val)
 
         # labels
-        labels = one_hot_converter(labels, C=num_classes)
+        labels = np.array(labels, dtype=np.int32)
 
         labels_train = labels[:train_size]
         labels_val = labels[train_size:]
@@ -120,10 +120,8 @@ def main(*, training=True, save_to=None, load_from=None, val=0.2):
             with tf.GradientTape() as tape:
                 out = model(inputs)
                 loss = \
-                    tf.keras.losses.categorical_crossentropy(labels, out)
+                    tf.keras.losses.sparse_categorical_crossentropy(labels, out)
                 loss = tf.reduce_mean(loss)
-
-            total_loss = (loss / int(labels.shape[1]))
 
             trainables = model.trainable_variables
             gradients = tape.gradient(loss, trainables)
@@ -136,7 +134,7 @@ def main(*, training=True, save_to=None, load_from=None, val=0.2):
             out_val = model(inputs_val)
             accuracy_val = calculate_accuracy(out_val, labels_val)
 
-            return loss, total_loss, accuracy, accuracy_val
+            return loss, accuracy, accuracy_val
 
         # execute training
         for epoch in range(epochs):
@@ -148,7 +146,7 @@ def main(*, training=True, save_to=None, load_from=None, val=0.2):
 
             for batch, (ins, outs) in enumerate(dataset, 1):
                 st = time.time()
-                batch_loss, _, accuracy, accuracy_val = \
+                batch_loss, accuracy, accuracy_val = \
                     training_step(ins, outs, inputs_val, labels_val, num_classes)
                 end = time.time()
 
