@@ -90,3 +90,31 @@ class ModelOutputShapeTest(unittest.TestCase):
         # predicted next one word by softmax
         self.assertEqual(out.shape, (batch_size, vocab_size))
         self.assertEqual(state.shape, (batch_size, units))
+
+    @patch('main.models.Attention.call')
+    def test_decoder_model_without_reusing_embeddings(self, mock_attention):
+        attention_units = 16
+        units = 32
+        batch_size = 4
+        vocab_size = 100
+        input_shape = (batch_size, 1)
+
+        input_word = np.random.randint(0, vocab_size-1, input_shape)
+
+        # mocking layers
+        # attention return shape (batch_size, seq_length, units)
+        mock_attention.return_value = \
+            (np.random.randn(batch_size, attention_units)
+                .astype(np.float32),
+             np.random.randn(batch_size, attention_units, 1)
+                .astype(np.float32))
+
+        model = Decoder(units, vocab_size)
+
+        out, state, attention_weights = model(input_word, None, None)
+
+        mock_attention.assert_called_once()
+
+        # predicted next one word by softmax
+        self.assertEqual(out.shape, (batch_size, vocab_size))
+        self.assertEqual(state.shape, (batch_size, units))

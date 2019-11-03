@@ -102,10 +102,15 @@ class Decoder(tf.keras.Model):
     def __init__(self,
                  units,
                  vocab_size,
-                 embedding_layer):
+                 embedding_layer=None):
         super(Decoder, self).__init__()
         self.units = units
+
         self.embedding = embedding_layer
+        if self.embedding is None:
+            # if not provided, re-define with fixed dimmension
+            self.embedding = Embedding(vocab_size, 256)
+
         self.gru = GRU(units,
                        return_sequences=True,
                        return_state=True,
