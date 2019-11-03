@@ -14,6 +14,7 @@ import tensorflow as tf
 
 from main.settings import ROOT_DIR
 from main.models import QuestionTypeClassification
+from main.models.train import train_cls_step
 from main.utils.loader import VQA, fetch_question_types
 from main.utils.preprocess import text_processor
 from main.metrics import calculate_accuracy
@@ -101,7 +102,7 @@ def main(*, training=True, save_to=None, load_from=None, val=0.2):
     # TRAINING STEP
     if training:
         inputs_train = processor(inputs_train)
-        inputs_val = processor(inputs_val)
+        inputs_val = [processor(inputs_val)]
 
         # labels
         labels = np.array(labels, dtype=np.int32)
@@ -146,8 +147,11 @@ def main(*, training=True, save_to=None, load_from=None, val=0.2):
 
             for batch, (ins, outs) in enumerate(dataset, 1):
                 st = time.time()
+                ins = [ins]
                 batch_loss, accuracy, accuracy_val = \
-                    training_step(ins, outs, inputs_val, labels_val, num_classes)
+                    train_cls_step(model, ins, outs, optimizer, inputs_val, labels_val,
+                                   loss='sparse_categorical_crossentropy')
+                    #training_step(ins, outs, inputs_val, labels_val, num_classes)
                 end = time.time()
 
                 if batch % 100 == 0:
