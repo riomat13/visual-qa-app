@@ -3,23 +3,39 @@
 
 import os
 
+# ignore tensorflow debug info
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+
 import unittest
 from unittest.mock import patch, Mock
 
 import numpy as np
 
 from main.models import (
+    get_mobilenet_encoder,
     Attention,
     QuestionTypeClassification,
     Encoder,
     Decoder
 )
 
-# ignore tensorflow debug info
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-
 
 class ModelOutputShapeTest(unittest.TestCase):
+
+    def test_mobilenet_encoder(self):
+        batch_size = 4
+        model = get_mobilenet_encoder()
+
+        sample_normalized_imgs = \
+            np.random.randint(0, 255,
+                              size=(batch_size, 224, 224, 3)) \
+
+        sample_normalized_imgs = sample_normalized_imgs.astype(np.float32)
+
+        out = model(sample_normalized_imgs)
+
+        self.assertEqual(out.shape, (batch_size, 1024))
+
     def test_attention_model(self):
         # feature shape is (128,)
         batch_size = 4

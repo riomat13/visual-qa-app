@@ -3,6 +3,45 @@
 
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, Embedding, GRU
+from tensorflow.keras.applications import MobileNet
+
+
+def _get_mobilenet_encoder():
+    model = None
+
+    def model_generator():
+        """MobileNet base encoder model
+
+        Given image shape has to be (None, 224, 224, 3)
+
+        Usage:
+            >>> imgs.shape
+            (32, 224, 224, 3)
+            >>> model = create_mobilenet_encoder()
+            >>> encoded = model(imgs)
+            >>> encoded.shape
+            TensorShape([32, 1024])
+        """
+        nonlocal model
+
+        if model is None:
+            mobilenet = MobileNet(include_top=False, weights='imagenet')
+            mobilenet_input = mobilenet.input
+            # shape of the last layer in MobileNet: (1, 1, 1024)
+            x = mobilenet.layers[-4].output
+            # average values in each channel
+            out = tf.keras.layers.GlobalAveragePooling2D()(x)
+
+            model = tf.keras.Model(
+                inputs=mobilenet_input,
+                outputs=out
+            )
+        return model
+    return model_generator
+
+
+# generate mobilenet base model function
+get_mobilenet_encoder = _get_mobilenet_encoder()
 
 
 class Attention(tf.keras.Model):
