@@ -4,7 +4,11 @@
 import unittest
 from unittest.mock import patch, mock_open
 
-from main.utils.loader import VQA, fetch_question_types
+from main.utils.loader import (
+    load_image, load_image_simple,
+    VQA,
+    fetch_question_types
+)
 
 
 JSON_DATA = {
@@ -24,6 +28,19 @@ JSON_DATA = {
         for i in range(1, 11)
     ],
 }
+
+
+class ImageLoaderTest(unittest.TestCase):
+
+    def test_image_loader(self):
+        path = 'data/train2014/COCO_train2014_000000000009.jpg'
+        img = load_image(path)
+        self.assertEqual(img.shape, (224, 224, 3))
+
+    def test_image_loader_simple(self):
+        path = 'data/train2014/COCO_train2014_000000000009.jpg'
+        img = load_image_simple(path)
+        self.assertEqual(img.shape, (224, 224, 3))
 
 
 class LoadDatasetTest(unittest.TestCase):
