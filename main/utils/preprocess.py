@@ -25,7 +25,10 @@ def one_hot_converter(labels, C):
 
 def text_processor(inputs, num_words=None, from_json=False):
     """Process text with Tokenizer and pad_sequence from keras.
+
     Padding by 0 and fix the lengths to the logest one.
+    Unknown word will be conerted to '<unk>' and padded word will be
+    '<pad>'. Each word index is 1 and 0 respectively.
 
     Args:
         inputs: str or a list of str
@@ -45,6 +48,9 @@ def text_processor(inputs, num_words=None, from_json=False):
         vocab_size: int
             current vocabulary size
             can be updated by update()
+        index_word: dict
+        word_index: dict
+            dicts storing word index and word pairs
 
     Methods:
         update(sentences: list(str)):
@@ -57,19 +63,22 @@ def text_processor(inputs, num_words=None, from_json=False):
         >>> processor = text_processor(dataset)
         >>> processed = processor(dataset)
         >>> print(processed)
-        [[ 3  1  2  4  0]
-         [ 5  6  2  7  0]
-         [ 8  1  9 10 11]]
+        [[ 4  2  3  5  0]
+         [ 6  7  3  8  0]
+         [ 9  2 10 11 12]]
 
         # skip words if not exist in initial dataset
         >>> new_sents = ['This is a new sentence']
         >>> processed = processor(new_sents)
         >>> print(processed)
-        [[8 1 2 11]]  # new is not contained in dataset
+        [[ 9  2  3  1 12]]
+        # word index 1 means out of vocabulary
+        >>> print(processor.index_word[1])
+        <unk>
 
         # you can get vocabulary size
         >>> processor.vocab_size
-        11
+        13
 
         # and also it can be updated
         # the IDs can be vary due to Tokenizer implementation
@@ -78,15 +87,17 @@ def text_processor(inputs, num_words=None, from_json=False):
         #
         # Note: once apply update, the word index may be changed
         # based on word frequency such as following example.
-        >>> processor(new_sents)
-        [[ 3  1  2 12  4]]
+        >>> print(processor(new_sents))
+        [[ 4  2  3 13  5]]
         >>> processor.vocab_size
-        12
+        13
     """
     if from_json:
         tokenizer = tokenizer_from_json(inputs)
     else:
-        tokenizer = Tokenizer(num_words=num_words, filters='')
+        tokenizer = Tokenizer(num_words=num_words,
+                              oov_token='<unk>',
+                              filters='!"#$%&()*+,-./:;<=>?@[\\]^_`{|}~')
         tokenizer.fit_on_texts(inputs)
 
     def processor(sentences):
@@ -102,6 +113,18 @@ def text_processor(inputs, num_words=None, from_json=False):
         tensor = pad_sequences(tensor, padding='post')
         return tensor
 
+    def _update():
+        """Helper function to update internal vocabulary."""
+        nonlocal processor
+        nonlocal tokenizer
+
+        tokenizer.word_index['<pad>'] = 0
+        tokenizer.index_word[0] = '<pad>'
+
+        processor.vocab_size = len(tokenizer.word_index)
+        processor.index_word = tokenizer.index_word
+        processor.word_index = tokenizer.word_index
+
     def update(sentences):
         """Update internal vocabulary.
 
@@ -112,7 +135,7 @@ def text_processor(inputs, num_words=None, from_json=False):
         nonlocal processor
 
         tokenizer.fit_on_texts(sentences)
-        processor.vocab_size = len(tokenizer.word_index)
+        _update()
 
     def to_json(file_path=None, **kwargs):
         """Returns a JSON string containing the tokenizer configuration.
@@ -138,9 +161,9 @@ def text_processor(inputs, num_words=None, from_json=False):
                 f.write(json_cfg)
         return json_cfg
 
-    processor.vocab_size = len(tokenizer.word_index)
     processor.update = update
     processor.to_json = to_json
+    _update()
 
     return processor
 

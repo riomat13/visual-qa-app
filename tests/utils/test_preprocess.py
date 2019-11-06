@@ -20,7 +20,7 @@ class TextProcessorTest(unittest.TestCase):
 
         vocab = set(
             [word for sent in sample
-                for word in sent.split()]
+                for word in sent.split()] + ['<pad>', '<unk>']
         )
         init_size = len(vocab)
 
@@ -37,8 +37,8 @@ class TextProcessorTest(unittest.TestCase):
         processed = processor(new_sample)
 
         # new sample has words wihich are not in original one
-        # so that the lengths after processed should be smaller
-        self.assertLess(len(processed[0]), len(new_sample[0].split()))
+        # and '<unk>' token should be stored in the index
+        self.assertEqual(len(processed[0]), len(new_sample[0].split()))
 
         for sent in new_sample:
             for word in sent.split():
