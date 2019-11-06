@@ -143,3 +143,38 @@ def text_processor(inputs, num_words=None, from_json=False):
     processor.to_json = to_json
 
     return processor
+
+
+def data_generator(dataset, batch_size, expand=False, process_func=None):
+    """Generate data with batch.
+
+    Args:
+        dataset: list or tuple
+            if process_func is given, each element will be processed
+            with this
+        batch_size: int
+            batch size to generate in each iteration
+        expand: boolean
+            set this to True if each element in dataset has
+            multiple data such as inputs and labels
+            otherwise it may generate data with unexpected way
+        process_func: function
+            apply to batch dataset
+
+    Return:
+        process_func(sub batch)
+    """
+    # this can generate all dataset even if indivisible
+    steps_per_batch = (len(dataset)-1) // batch_size + 1
+
+    for step in range(steps_per_batch):
+        start = step * batch_size
+        batch = dataset[start:start+batch_size]
+
+        if process_func is not None:
+            batch = process_func(batch)
+
+        if expand:
+            yield list(zip(*batch))
+        else:
+            yield batch

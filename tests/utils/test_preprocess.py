@@ -7,7 +7,11 @@ import random
 
 import numpy as np
 
-from main.utils.preprocess import text_processor, one_hot_converter
+from main.utils.preprocess import (
+    text_processor,
+    one_hot_converter,
+    data_generator
+)
 
 
 class TextProcessorTest(unittest.TestCase):
@@ -86,6 +90,75 @@ class TextProcessorTest(unittest.TestCase):
 
         for vec, val in zip(matrix, test_data):
             self.assertEqual(vec[val], 1)
+
+
+class DataGeneratorTest(unittest.TestCase):
+
+    def test_data_generator_for_single_data_without_process(self):
+        # test with sets with single data type
+        steps = 5
+        batch_size = 4
+        data_size = batch_size * steps
+        dataset = list(range(data_size))
+
+        for i, d in enumerate(data_generator(dataset, batch_size), 1):
+            self.assertEqual(len(d), batch_size)
+
+        self.assertEqual(i, steps)
+
+    def test_data_generator_for_dataset_without_process(self):
+        # test with dataset with sets of two types of data
+        steps = 5
+        batch_size = 4
+        data_size = batch_size * steps
+        dataset = [(i, j) for i, j in enumerate(['test'] * data_size)]
+
+        for i, batch in enumerate(data_generator(dataset, batch_size, expand=True), 1):
+            self.assertEqual(len(batch), 2)
+            self.assertEqual(len(batch[0]), batch_size)
+
+        self.assertEqual(i, steps)
+
+    def sample_processor1(self, dataset):
+        # fake process function
+        size = len(dataset)
+        return list(range(size)), list(reversed(range(size)))
+
+    def test_data_generator_from_process_func(self):
+        # test with sets with single data type
+        steps = 5
+        batch_size = 4
+        data_size = batch_size * steps
+        dataset = list(range(data_size))
+
+        for i, batch in enumerate(
+                data_generator(dataset, batch_size,
+                               process_func=self.sample_processor1), 1):
+            self.assertEqual(len(batch), 2)
+            self.assertEqual(len(batch[0]), batch_size)
+
+        self.assertEqual(i, steps)
+
+    def sample_processor2(self, dataset):
+        # fake process function
+        size = len(dataset)
+        return [(u, v) for u, v in zip(range(size), reversed(range(size)))]
+
+    def test_data_generator_with_expanding_data_from_process_func(self):
+        # test with sets with single data type
+        steps = 5
+        batch_size = 4
+        data_size = batch_size * steps
+        dataset = list(range(data_size))
+
+        for i, batch in enumerate(
+                data_generator(dataset, batch_size,
+                               expand=True,
+                               process_func=self.sample_processor2), 1):
+            self.assertEqual(len(batch), 2)
+            self.assertEqual(len(batch[0]), batch_size)
+
+        self.assertEqual(i, steps)
 
 
 if __name__ == '__main__':
