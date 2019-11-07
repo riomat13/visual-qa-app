@@ -29,6 +29,7 @@ def session_builder():
             bind=engine
         )
     )
+    return Session
 
 
 def session_removal():
@@ -65,7 +66,7 @@ def provide_session(func):
         arg_session = 'session'
 
         # extract all names of args and kwargs
-        func_parms = func.__code__.co_varnames
+        func_params = func.__code__.co_varnames
 
         # if 'session' is in args and the value is given
         session_in_args = arg_session in func_params and \
