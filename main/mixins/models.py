@@ -6,8 +6,14 @@ from datetime import datetime
 from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declared_attr
+from sqlalchemy.inspection import inspect
 
 from main.orm.db import provide_session
+
+
+def _serialize(obj):
+    # TODO: check if all attrs and future attrs work with this function
+    return {key: getattr(obj, key) for key in inspect(obj).attrs.keys()}
 
 
 class BaseMixin(object):
@@ -19,7 +25,21 @@ class BaseMixin(object):
 
     @classmethod
     def get(cls, id):
+        """Pass id and return corresponding model instance."""
         return cls.query.get(id)
+
+    @provide_session
+    def save(self, session=None):
+        """Save current state to session."""
+        session.add(self)
+
+    @provide_session
+    def delete(self, session=None):
+        """Delete model."""
+        session.delete(self)
+
+    def to_dict(self):
+        return _serialize(self)
 
 
 class ModelLogMixin(object):
