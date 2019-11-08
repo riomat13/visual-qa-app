@@ -8,7 +8,9 @@ set_config('test')
 
 from main.web.app import create_app
 from main.orm.db import Base, session_builder
-from main.web.models.ml import MLModel, ModelLog, ModelRequestLog
+from main.web.models.ml import (
+    MLModel, ModelLog, ModelRequestLog, PredictionScore
+)
 
 Session = session_builder()
 session = None
@@ -47,10 +49,12 @@ class _Base(unittest.TestCase):
 class MLModelTest(_Base):
 
     def test_model_type_save_and_query(self):
-        model = MLModel(type='question_type',
-                           category='classification',
-                           module='main.models.questions.types')
-        session.add(model)
+        model = MLModel(name='test_model',
+                        type='question_type',
+                        category='classification',
+                        module='main.models.questions.types')
+
+        model.save(session)
         session.flush()
 
         data = MLModel.query(session).first()
@@ -63,7 +67,7 @@ class ModelLogTest(_Base):
     def test_model_log_saved(self):
         log = ModelLog(log_type='success', log_text=SAMPLE_TEXT)
 
-        session.add(log)
+        log.save(session)
         session.flush()
 
         data = ModelLog.query(session).first()
@@ -77,13 +81,25 @@ class ModelRequestLogTest(_Base):
     def test_model_request_log_saved(self):
         log = ModelRequestLog(log_type='success', log_text=SAMPLE_TEXT)
 
-        session.add(log)
+        log.save(session)
         session.flush()
 
         data = ModelRequestLog.query(session).first()
 
         self.assertEqual(log.id, data.id)
         self.assertEqual(log.log_text, data.log_text)
+
+
+class PredictionScoreTest(_Base):
+
+    def test_model_saved_properly(self):
+        pred = PredictionScore('sample.jpg', 'some result', rate=1)
+        pred.save(session)
+        session.flush()
+
+        data = PredictionScore.query(session).first()
+        self.assertEqual(pred.id, data.id)
+        self.assertEqual(pred.filename, data.filename)
 
 
 if __name__ == '__main__':

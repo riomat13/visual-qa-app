@@ -18,6 +18,8 @@ def _serialize(obj):
 
 class BaseMixin(object):
 
+    id = Column(Integer, primary_key=True)
+
     @classmethod
     @provide_session
     def query(cls, session=None):
@@ -44,7 +46,6 @@ class BaseMixin(object):
 
 class ModelLogMixin(object):
 
-    id = Column(Integer, primary_key=True)
     logged_time = Column(DateTime, default=datetime.utcnow())
     # Log Type: e.g. Info, Warning, Error
     log_type = Column(String(32), nullable=False)
