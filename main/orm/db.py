@@ -35,8 +35,9 @@ def session_builder():
 def session_removal():
     global Session
 
-    Session.remove()
-    Session = None
+    if Session is not None:
+        Session.remove()
+        Session = None
 
 
 @contextlib.contextmanager
