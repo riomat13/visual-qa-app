@@ -34,7 +34,7 @@ class ModelOutputShapeTest(unittest.TestCase):
 
         out = model(sample_normalized_imgs)
 
-        self.assertEqual(out.shape, (batch_size, 1024))
+        self.assertEqual(out.shape, (batch_size, 7, 7, 1024))
 
     def test_attention_model(self):
         # feature shape is (128,)

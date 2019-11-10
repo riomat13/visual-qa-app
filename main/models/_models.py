@@ -17,20 +17,18 @@ def _get_mobilenet_encoder():
         Usage:
             >>> imgs.shape
             (32, 224, 224, 3)
-            >>> model = create_mobilenet_encoder()
+            >>> model = get_mobilenet_encoder()
             >>> encoded = model(imgs)
             >>> encoded.shape
-            TensorShape([32, 1024])
+            TensorShape([32, 7, 7, 1024])
         """
         nonlocal model
 
         if model is None:
             mobilenet = MobileNet(include_top=False, weights='imagenet')
             mobilenet_input = mobilenet.input
-            # shape of the last layer in MobileNet: (1, 1, 1024)
-            x = mobilenet.layers[-4].output
-            # average values in each channel
-            out = tf.keras.layers.GlobalAveragePooling2D()(x)
+            # shape of the last layer in MobileNet: (7, 7, 1024)
+            out = mobilenet.layers[-1].output
 
             model = tf.keras.Model(
                 inputs=mobilenet_input,
