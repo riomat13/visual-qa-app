@@ -4,6 +4,8 @@
 import os
 from pathlib import Path
 
+import uuid
+
 ROOT_DIR = Path(__file__).parents[2]
 
 
@@ -11,7 +13,10 @@ class Config(object):
     """Base config for web app."""
     DEBUG = False
     TESTING = False
-    SECRET_KET = os.environ.get('SECRET_KEY', 'temp_key')
+    SECRET_KEY = os.environ.get(
+        'SECRET_KEY',
+        b'\x93P\x8d\xaa8d\xce\xa1J\xca\x1d\xea\x88r\xfbH~\xfd\xb81f\xb3\xc3$'
+    )
 
     # Database settings
     DATABASE_HOST = os.environ.get('DATABASE_HOST', 'localhost')

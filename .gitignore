@@ -5,7 +5,11 @@ __pycache__/
 # environment
 .env/
 
+# scripts to preprocess dataset
+preprocess*.py
+
 # data / database
+static/
 data/
 checkpoints/
 */migrations/versions/
