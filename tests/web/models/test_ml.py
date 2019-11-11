@@ -6,44 +6,12 @@ import unittest
 from main.settings import set_config
 set_config('test')
 
-from main.web.app import create_app
-from main.orm.db import Base, session_builder
+from .base import _Base
 from main.web.models.ml import (
     MLModel, ModelLog, ModelRequestLog, PredictionScore
 )
 
-Session = session_builder()
-session = None
-
 SAMPLE_TEXT = 'sample text'
-
-class _Base(unittest.TestCase):
-
-    @classmethod
-    def setUpClass(cls):
-        global session
-        session = Session()
-
-    @classmethod
-    def tearDownClass(cls):
-        session.close()
-        Session.remove()
-
-    def setUp(self):
-        app = create_app('test')
-        app_context = app.app_context()
-        app_context.push()
-
-        self.app_context = app_context
-
-        from main.orm.db import engine
-        self.engine = engine
-        Base.metadata.create_all(engine)
-
-    def tearDown(self):
-        session.rollback()
-        self.app_context.pop()
-        Base.metadata.drop_all(self.engine)
 
 
 class MLModelTest(_Base):
@@ -54,10 +22,10 @@ class MLModelTest(_Base):
                         category='classification',
                         module='main.models.questions.types')
 
-        model.save(session)
-        session.flush()
+        model.save(self.session)
+        self.session.flush()
 
-        data = MLModel.query(session).first()
+        data = MLModel.query(self.session).first()
 
         self.assertEqual(model.id, data.id)
 
@@ -67,10 +35,10 @@ class ModelLogTest(_Base):
     def test_model_log_saved(self):
         log = ModelLog(log_type='success', log_text=SAMPLE_TEXT)
 
-        log.save(session)
-        session.flush()
+        log.save(self.session)
+        self.session.flush()
 
-        data = ModelLog.query(session).first()
+        data = ModelLog.query(self.session).first()
 
         self.assertEqual(log.id, data.id)
         self.assertEqual(log.log_text, data.log_text)
@@ -81,10 +49,10 @@ class ModelRequestLogTest(_Base):
     def test_model_request_log_saved(self):
         log = ModelRequestLog(log_type='success', log_text=SAMPLE_TEXT)
 
-        log.save(session)
-        session.flush()
+        log.save(self.session)
+        self.session.flush()
 
-        data = ModelRequestLog.query(session).first()
+        data = ModelRequestLog.query(self.session).first()
 
         self.assertEqual(log.id, data.id)
         self.assertEqual(log.log_text, data.log_text)
@@ -94,10 +62,10 @@ class PredictionScoreTest(_Base):
 
     def test_model_saved_properly(self):
         pred = PredictionScore('sample.jpg', 'some result', rate=1)
-        pred.save(session)
-        session.flush()
+        pred.save(self.session)
+        self.session.flush()
 
-        data = PredictionScore.query(session).first()
+        data = PredictionScore.query(self.session).first()
         self.assertEqual(pred.id, data.id)
         self.assertEqual(pred.filename, data.filename)
 
