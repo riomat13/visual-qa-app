@@ -2,16 +2,14 @@
 # -*- coding: utf-8 -*-
 
 import os.path
+import asyncio
 
 from flask import request, render_template, redirect, url_for, session
 from werkzeug import secure_filename
 
 from . import base
-from main.settings import ROOT_DIR
-
-
-# TODO: replace with actual function
-run_model = lambda x: 'test result'
+from main.settings import Config
+from main.models.client import run_model
 
 
 @base.route('/')
@@ -33,8 +31,9 @@ def prediction():
                 # TODO: add warning
                 return redirect(url_for('base.prediction'))
 
-            # TODO:
-            pred = run_model(filename)
+            # TODO: add form for sentence
+            path = os.path.join(Config.UPLOAD_DIR, filename)
+            pred = asyncio.run(run_model(path, 'test'))
 
         # uploaded an image
         if request.form['action'] == 'upload':

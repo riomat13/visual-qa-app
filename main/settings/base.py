@@ -24,6 +24,9 @@ class Config(object):
         'port': 12345,
     }
 
+    # upload directory
+    UPLOAD_DIR = os.path.join(ROOT_DIR, 'main/web/static/media/uploaded')
+
     # Database settings
     DATABASE_HOST = os.environ.get('DATABASE_HOST', 'localhost')
     DATABASE_PORT = os.environ.get('DATABASE_PORT', 3306)
