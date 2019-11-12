@@ -1,6 +1,12 @@
 {% extends 'base.html' %}
 {% block content %}
 <h2>Prediction page</h2>
+{% for message in get_flashed_messages() %}
+<div class="alert alert-warning">
+  <button class="close">&times;</button>
+  {{ message }}
+</div>
+{% endfor %}
 <form method="POST" enctype="multipart/form-data">
     <input type="file" name="file">
     <input type="submit" name="action" value="upload">
@@ -9,9 +15,12 @@
     <img src="/static/media/uploaded/{{ filename }}" alt="Loaded Image" height="224">
 {% endif %}
 <form method="POST">
+    {{ form.hidden_tag() }}
+    {{ form.question.label }}{{ form.question() }}
     <input type="submit" name="action" value="Submit">
 </form>
 {% if prediction %}
+<p>Question: {{ question }}</p>
 <p>Predicted result: {{ prediction }}</p>
 {% endif %}
 {% endblock content %}
