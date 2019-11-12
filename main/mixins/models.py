@@ -22,7 +22,7 @@ class BaseMixin(object):
 
     @classmethod
     @provide_session
-    def query(cls, session=None):
+    def query(cls, *, session=None):
         return session.query(cls)
 
     @classmethod
@@ -31,12 +31,14 @@ class BaseMixin(object):
         return cls.query.get(id)
 
     @provide_session
-    def save(self, session=None):
+    def save(self, *, autoflush=True, session=None):
         """Save current state to session."""
         session.add(self)
+        if autoflush:
+            session.flush()
 
     @provide_session
-    def delete(self, session=None):
+    def delete(self, *, session=None):
         """Delete model."""
         session.delete(self)
 

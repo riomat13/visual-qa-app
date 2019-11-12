@@ -15,11 +15,13 @@ class ImageModelTest(_Base):
 
     def test_image_model_save_and_extract(self):
         img = Image(filename='123')
-        img.save(self.session)
+        img.save(session=self.session)
 
-        self.session.flush()
-
-        data = Image.query(self.session).first()
+        data = Image.query(session=self.session).first()
 
         self.assertEqual(data.id, img.id)
         self.assertEqual(data.filename, img.filename)
+
+
+if __name__ == '__main__':
+    unittest.main()
