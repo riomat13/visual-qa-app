@@ -71,21 +71,41 @@ class PredictionScore(BaseMixin, Base):
     rate = Column(Integer, nullable=True)
     # file name to be used for prediction
     filename = Column(String(64), nullable=False)
+    # question about image
+    question = Column(String(128), nullable=False)
     # predicted answers
     prediction = Column(String(128), nullable=False)
     # ideal answer (optional)
+    question_type = Column(String(32), nullable=True)
     answer = Column(String(128), nullable=True)
     predicted_time = Column(DateTime, default=datetime.utcnow())
 
     model_id = Column(Integer, ForeignKey('prediction_model.id'))
     model = relationship('PredictionModel')
 
-    def __init__(self, filename, prediction, rate=None, answer=None):
+    def __init__(self, filename, question, prediction, rate=None, **kwargs):
+        """Predicted score.
+
+        Args:
+            filename: str
+                original image filename
+            question: str
+                asked question about given image
+            prediction: str
+                predicted answer
+            rate(optional): int
+                rate the result, 1 - 5
+            question_type(optional): str
+                category of question type (e.g. `what is`)
+            answer(optional): str
+                ideal answer
+        """
         # validator
         if rate is not None:
             if not 0 < rate < 6:
                 raise ValueError('Rate must be chosen from 1 to 5')
-        super(PredictionScore, self).__init__(rate=rate,
-                                              filename=filename,
+        super(PredictionScore, self).__init__(filename=filename,
+                                              question=question,
                                               prediction=prediction,
-                                              answer=answer)
+                                              rate=rate,
+                                              **kwargs)

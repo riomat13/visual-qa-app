@@ -61,7 +61,7 @@ class ModelRequestLogTest(_Base):
 class PredictionScoreTest(_Base):
 
     def test_model_saved_properly(self):
-        pred = PredictionScore('sample.jpg', 'some result', rate=1)
+        pred = PredictionScore('sample.jpg', 'some question', 'some result', rate=1)
         pred.save(self.session)
         self.session.flush()
 
