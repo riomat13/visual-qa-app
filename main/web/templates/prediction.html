@@ -6,7 +6,7 @@
     <input type="submit" name="action" value="upload">
 </form>
 {% if filename %}
-    <img src="/static/media/uploaded/{{ filename }}" alt="Loaded Image">
+    <img src="/static/media/uploaded/{{ filename }}" alt="Loaded Image" height="224">
 {% endif %}
 <form method="POST">
     <input type="submit" name="action" value="Submit">
