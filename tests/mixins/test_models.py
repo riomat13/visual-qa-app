@@ -10,7 +10,7 @@ from flask import jsonify
 
 from main.web.app import create_app
 from main.orm.db import Base, session_builder
-from main.web.models.ml import MLModel
+from main.orm.models.ml import MLModel
 from main.mixins.models import BaseMixin
 
 Session = session_builder()

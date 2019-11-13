@@ -6,7 +6,7 @@ import unittest
 from main.settings import set_config
 set_config('test')
 
-from main.web.models.images import Image
+from main.orm.models.images import Image
 
 from .base import _Base
 

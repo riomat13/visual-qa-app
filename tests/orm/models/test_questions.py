@@ -12,7 +12,7 @@ set_config('test')
 
 from .base import _Base
 from main.web.app import create_app
-from main.web.models.questions import QuestionType
+from main.orm.models.questions import QuestionType
 
 logging.disable(logging.CRITICAL)
 

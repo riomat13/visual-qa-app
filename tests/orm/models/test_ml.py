@@ -7,7 +7,7 @@ from main.settings import set_config
 set_config('test')
 
 from .base import _Base
-from main.web.models.ml import (
+from main.orm.models.ml import (
     MLModel, ModelLog, ModelRequestLog, PredictionScore
 )
 
