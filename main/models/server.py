@@ -5,15 +5,15 @@ import asyncio
 import logging
 
 from main.utils.loader import load_image_simple as load_image
-#from main.models.questions import QType
+from main.orm.models.ml import ModelRequestLog
+from main.models.infer import predict_question_type
 
 log = logging.getLogger(__name__)
 
-# build model for serving
-#q_type_model = QType(serve=True)
-q_type_model = lambda x: x
-predict = lambda x: 'test result'
-q_type_model.predict = predict
+
+async def save_predict_history(filepath, sentence):
+    # TODO: store results to DB
+    pass
 
 
 async def run_prediction(reader, writer):
@@ -22,13 +22,17 @@ async def run_prediction(reader, writer):
     data = await reader.read(1024)
     filepath, sentence = data.decode().split('\t')
 
-    img = load_image(filepath)
+    # TODO: make active after build model
+    #img = load_image(filepath)
 
     # TODO: add prediction pipeline
-    pred = q_type_model.predict(img)
+    pred = predict_question_type(sentence)
     writer.write(pred.encode())
     await writer.drain()
     writer.close()
+
+    # save the result
+    await save_predict_history(filepath, sentence)
 
 
 async def run_server(host, port):
