@@ -59,7 +59,6 @@ class TextProcessorTest(unittest.TestCase):
         init_size = len(vocab)
 
         processor = text_processor(sample)
-        processed = processor(sample)
         self.assertEqual(processor.vocab_size, init_size)
 
     def test_processed_sentence_lengths_are_same(self):
@@ -75,6 +74,18 @@ class TextProcessorTest(unittest.TestCase):
         ]
         processed = processor(examples)
         self.assertEqual(len(processed[0]), len(processed[1]))
+
+    def test_processed_sentence_lengths_are_fixed_by_given_number(self):
+        maxlen = 4
+        sample_text = [
+            'sample text sentence',
+            'This is another sentence',
+            'This is not processed yet and this is treated as long sentence example for test'
+        ]
+        processor = text_processor(sample_text, maxlen=maxlen)
+        processed = processor(sample_text)
+        self.assertEqual(processed.shape,
+                        (len(sample_text), maxlen))
 
     def test_text_processor_load_data_by_config(self):
         processor = text_processor(from_config=True)

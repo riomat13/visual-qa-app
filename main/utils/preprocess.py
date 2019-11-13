@@ -25,7 +25,7 @@ def one_hot_converter(labels, C):
     return vector
 
 
-def text_processor(inputs='', num_words=None, *, from_json=False, from_config=False):
+def text_processor(inputs='', num_words=None, maxlen=None, *, from_json=False, from_config=False):
     """Process text with Tokenizer and pad_sequence from keras.
 
     Padding by 0 and fix the lengths to the logest one.
@@ -38,6 +38,11 @@ def text_processor(inputs='', num_words=None, *, from_json=False, from_config=Fa
         num_words: int
             the maximum number of words to keep,
             based on word frequency.
+        maxlen: int
+            if this is set to a certain number
+            the output sequence length will be fixed to the given number
+            by padding with '<pad>'.
+            if the length is longer than the number, it will be truncated.
         from_json: boolean
             if this is set to `True`, created tokenizer object
             based on json string.
@@ -124,7 +129,7 @@ def text_processor(inputs='', num_words=None, *, from_json=False, from_config=Fa
             sentences = [sentences]
 
         tensor = tokenizer.texts_to_sequences(sentences)
-        tensor = pad_sequences(tensor, padding='post')
+        tensor = pad_sequences(tensor, maxlen=maxlen, padding='post')
         return tensor
 
     def _update():
