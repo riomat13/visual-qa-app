@@ -33,6 +33,8 @@ def train_cls_step(model, inputs, labels, optimizer,
     """
     global loss_func
 
+    acc_val = None
+
     if loss_func is None:
         if loss == 'sparse_categorical_crossentropy':
             loss_func = tf.keras.losses.sparse_categorical_crossentropy
@@ -48,7 +50,9 @@ def train_cls_step(model, inputs, labels, optimizer,
 
     with tf.GradientTape() as tape:
         out = model(*inputs)
-        losses = loss_func(labels, out)
+        if isinstance(out, tuple):
+            out = out[0]
+        losses = loss_func(labels, out, from_logits=True)
         loss = tf.reduce_mean(losses)
 
     trainables = model.trainable_variables
@@ -59,6 +63,8 @@ def train_cls_step(model, inputs, labels, optimizer,
 
     if inputs_val is not None and labels_val is not None:
         out_val = model(*inputs_val)
+        if isinstance(out_val, tuple):
+            out_val = out_val[0]
         acc_val = calculate_accuracy(out_val, labels_val)
 
     return loss, acc, acc_val
