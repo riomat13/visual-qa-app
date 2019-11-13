@@ -10,7 +10,7 @@ if __name__ == '__main__':
     from main.models.server import run_server
 
     parser = argparse.ArgumentParser(description='Serve model')
-    parser.add_argument('--host', type=str,
+    parser.add_argument('-H', '--host', type=str,
                         default=Config.MODEL_SERVER
                             .get('host', 'localhost'),
                         help='host machine to make connection')
