@@ -24,6 +24,18 @@ class Config(object):
         'port': 12345,
     }
 
+    # model information
+    MODELS = {
+        # question type classification
+        'QTYPE': os.path.join(ROOT_DIR, 'checkpoints', 'question_types'),
+        # yes/no
+        'Y/N': os.path.join(ROOT_DIR, 'checkpoints', 'y_n'),
+        # what
+        'WHAT': os.path.join(ROOT_DIR, 'checkpoints', 'what'),
+        # text_tokenizer config file path
+        'TOKENIZER': os.path.join(ROOT_DIR, 'data', 'tokenizer_config.json'),
+    }
+
     # upload directory
     UPLOAD_DIR = os.path.join(ROOT_DIR, 'main/web/static/media/uploaded')
 
