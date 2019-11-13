@@ -20,7 +20,7 @@ from main.models import (
 )
 
 
-class ModelOutputShapeTest(unittest.TestCase):
+class MobileNetEncoderTest(unittest.TestCase):
 
     def test_mobilenet_encoder(self):
         batch_size = 4
@@ -36,6 +36,9 @@ class ModelOutputShapeTest(unittest.TestCase):
 
         self.assertEqual(out.shape, (batch_size, 7, 7, 1024))
 
+
+class AttentionModelTest(unittest.TestCase):
+
     def test_attention_model(self):
         # feature shape is (128,)
         batch_size = 4
@@ -43,14 +46,18 @@ class ModelOutputShapeTest(unittest.TestCase):
         hidden_units = 128
 
         # encoded sequence shape (batch_size, time_steps, seq_len)
-        input_ = np.random.randn(batch_size, hidden_units)
-        hidden_outputs = np.random.randn(batch_size, seq_length, hidden_units)
+        features = np.random.randn(batch_size, seq_length, hidden_units)
+        states = np.random.randn(batch_size, hidden_units)
 
+        # different unit size from input
         units = 32
         model = Attention(units)
-        out, weights = model(input_, hidden_outputs)
-        self.assertEqual(out.shape, (batch_size, hidden_units))
+        out, weights = model(features, states)
+        self.assertEqual(out.shape, (batch_size, units))
         self.assertEqual(weights.shape, (batch_size, seq_length, 1))
+
+
+class QuestionTypeClassificationTest(unittest.TestCase):
 
     def test_questiontypeclassification_model(self):
         batch_size = 4
@@ -67,6 +74,9 @@ class ModelOutputShapeTest(unittest.TestCase):
         out = model(seqs)
         self.assertEqual(out.shape, (batch_size, n_classes))
 
+
+class EncoderTest(unittest.TestCase):
+
     def test_encoder_model(self):
         batch_size = 4
         image_features = np.random.randn(batch_size, 1024)
@@ -76,6 +86,9 @@ class ModelOutputShapeTest(unittest.TestCase):
         model = Encoder(units=units)
         out = model(image_features, sent_features)
         self.assertEqual(out.shape, (batch_size, units))
+
+
+class DecoderTest(unittest.TestCase):
 
     @patch('main.models.Attention.call')
     def test_decoder_model(self, mock_attention):

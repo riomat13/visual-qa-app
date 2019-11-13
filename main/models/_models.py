@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import tensorflow as tf
-from tensorflow.keras.layers import Dense, Embedding, GRU
 from tensorflow.keras.applications import MobileNet
 
 
@@ -46,39 +45,40 @@ class Attention(tf.keras.Model):
     def __init__(self, units):
         super(Attention, self).__init__()
         # FC for input feature
-        self.dense1 = Dense(units)
+        self.dense_features = tf.keras.layers.Dense(units)
         # FC for hidden states from encoder
-        self.dense2 = Dense(units)
-        self.V = Dense(1)
+        self.dense_states = tf.keras.layers.Dense(units)
 
-    def call(self, features, hidden_outputs):
+        self.dense_out = tf.keras.layers.Dense(1)
+
+    def call(self, features, states):
         """
         Args:
-            features:      encoded features
-                shape = (batch_size, hidden_size)
-            hidden_outputs: hidden outputs from encoder
+            features: encoded features from RNN
                 shape = (batch_size, sequence_length, embedding_dim)
+            states:   hidden states
+                shape = (batch_size, hidden_size)
         Returns:
             context: context tensor
                 shape = (batch_size, hidden_size)
             attention_weights: weights used for attention
                 shape = (batch_size, sequence_length, 1)
         """
-        # expand dim to add time step axis => (batch_size, 1, hidden_size)
-        x = tf.expand_dims(features, 1)
+        features = self.dense_features(features)
 
         # weights to update feature importance
-        x_encoded = self.dense1(x)
-        hidden_encoded = self.dense2(hidden_outputs)
-        score_ = tf.nn.tanh(x_encoded + hidden_encoded)
-        score = self.V(score_)
+        states = self.dense_states(states)
+        states = tf.keras.layers.RepeatVector(features.shape[1])(states)
 
-        # normalize output score
+        # calculate attention weights
+        # (batch_size, sequence_length, units)
+        score = tf.nn.tanh(features + states)
+        score = self.dense_out(score)
         attention_weights = tf.nn.softmax(score, axis=1)
 
         # update the feature weighted by importance
         # context shape = (batch_size, units)
-        context = attention_weights * hidden_outputs
+        context = attention_weights * features
         context = tf.reduce_sum(context, axis=1)
 
         return context, attention_weights
@@ -93,13 +93,13 @@ class QuestionTypeClassification(tf.keras.Model):
             num_classes = len(fetch_question_types())
 
         super(QuestionTypeClassification, self).__init__()
-        self.embedding = Embedding(vocab_size, embedding_dim)
-        self.gru = GRU(units,
-                       return_sequences=False,
-                       recurrent_initializer='glorot_uniform')
-        self.dense1 = Dense(units, activation='relu')
-        self.dense2 = Dense(256, activation='relu')
-        self.out_layer = Dense(num_classes, activation='softmax')
+        self.embedding = tf.keras.layers.Embedding(vocab_size+1, embedding_dim)
+        self.gru = tf.keras.layers.GRU(units,
+                                       return_sequences=False,
+                                       recurrent_initializer='glorot_uniform')
+        self.dense1 = tf.keras.layers.Dense(units, activation='relu')
+        self.dense2 = tf.keras.layers.Dense(256, activation='relu')
+        self.out_layer = tf.keras.layers.Dense(num_classes, activation='softmax')
 
     def call(self, sequences):
         x = self.embedding(sequences)
@@ -116,8 +116,8 @@ class Encoder(tf.keras.Model):
     """Encoding image and question to answer the question."""
     def __init__(self, units=128):
         super(Encoder, self).__init__()
-        self.dense_img = Dense(units)
-        self.dense_sent = Dense(units)
+        self.dense_img = tf.keras.layers.Dense(units)
+        self.dense_sent = tf.keras.layers.Dense(units)
 
     def call(self, img_features, sent_features):
         """Calculate encoded feature by images and questions.
@@ -146,14 +146,14 @@ class Decoder(tf.keras.Model):
         self.embedding = embedding_layer
         if self.embedding is None:
             # if not provided, re-define with fixed dimmension
-            self.embedding = Embedding(vocab_size, 256)
+            self.embedding = tf.keras.layers.Embedding(vocab_size+1, 256)
 
-        self.gru = GRU(units,
-                       return_sequences=True,
-                       return_state=True,
-                       recurrent_initializer='glorot_uniform')
-        self.dense1 = Dense(units)
-        self.output_layer = Dense(vocab_size)
+        self.gru = tf.keras.layers.GRU(units,
+                                       return_sequences=True,
+                                       return_state=True,
+                                       recurrent_initializer='glorot_uniform')
+        self.dense1 = tf.keras.layers.Dense(units)
+        self.output_layer = tf.keras.layers.Dense(vocab_size)
         self.attention = Attention(units)
 
     def call(self, x, features, encoded):
