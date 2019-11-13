@@ -52,6 +52,16 @@ class TextProcessorTest(unittest.TestCase):
         processed = processor(new_sample)
         self.assertEqual(len(processed[0]), len(new_sample[0].split()))
 
+    def test_text_processor_passing_str(self):
+        sample = 'test sentence'
+
+        vocab = set(sample.split() + ['<pad>', '<unk>'])
+        init_size = len(vocab)
+
+        processor = text_processor(sample)
+        processed = processor(sample)
+        self.assertEqual(processor.vocab_size, init_size)
+
     def test_processed_sentence_lengths_are_same(self):
         sample_text = [
             'sample text sentence',
@@ -65,6 +75,10 @@ class TextProcessorTest(unittest.TestCase):
         ]
         processed = processor(examples)
         self.assertEqual(len(processed[0]), len(processed[1]))
+
+    def test_text_processor_load_data_by_config(self):
+        processor = text_processor(from_config=True)
+        self.assertGreater(processor.vocab_size, 0)
 
     def test_reuse_text_processor_by_json(self):
         sample_text = ['sample text sentence']

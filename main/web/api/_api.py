@@ -4,7 +4,7 @@
 from flask import jsonify
 
 from . import api
-from main.web.models.ml import MLModel
+from main.orm.models.ml import MLModel
 from main.orm.db import provide_session
 
 

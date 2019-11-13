@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import logging
 from datetime import datetime
 
+import sqlalchemy
 from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.inspection import inspect
 
 from main.orm.db import provide_session
+
+log = logging.getLogger(__name__)
 
 
 def _serialize(obj):
@@ -22,7 +26,7 @@ class BaseMixin(object):
 
     @classmethod
     @provide_session
-    def query(cls, session=None):
+    def query(cls, *, session=None):
         return session.query(cls)
 
     @classmethod
@@ -31,12 +35,21 @@ class BaseMixin(object):
         return cls.query.get(id)
 
     @provide_session
-    def save(self, session=None):
+    def save(self, *, autoflush=True, session=None):
         """Save current state to session."""
-        session.add(self)
+        try:
+            session.add(self)
+            if autoflush:
+                session.flush()
+        except sqlalchemy.exc.IntegrityError as e:
+            log.error(e)
+            session.rollback()
+        except Exception as e:
+            session.rollback()
+            raise
 
     @provide_session
-    def delete(self, session=None):
+    def delete(self, *, session=None):
         """Delete model."""
         session.delete(self)
 

@@ -2,16 +2,15 @@
 # -*- coding: utf-8 -*-
 
 import os.path
+import asyncio
 
-from flask import request, render_template, redirect, url_for, session
+from flask import request, render_template, redirect, url_for, session, flash
 from werkzeug import secure_filename
 
 from . import base
-from main.settings import ROOT_DIR
-
-
-# TODO: replace with actual function
-run_model = lambda x: 'test result'
+from main.settings import Config
+from main.web.forms import QuestionForm
+from main.models.client import run_model
 
 
 @base.route('/')
@@ -22,19 +21,29 @@ def index():
 @base.route('/prediction', methods=['GET', 'POST'])
 def prediction():
     filename = None
+    question = None
     pred = None
+
+    form = QuestionForm()
 
     if request.method == 'POST':
         # if submitted to preduct
-        if request.form['action'] == 'Submit':
-            # if image is not uploaded
+        if form.validate_on_submit():
+            question = form.question.data
+            form.question.data = ''
+
+            # handle uploaded image
             filename = session.get('image')
-            if not filename:
-                # TODO: add warning
+            # TODO: make reusable, add remove current image button
+            if filename is not None:
+                session.pop('image')
+            else:
+                flash('Image is not provided')
                 return redirect(url_for('base.prediction'))
 
-            # TODO:
-            pred = run_model(filename)
+            # TODO: add form for sentence
+            path = os.path.join(Config.UPLOAD_DIR, filename)
+            pred = asyncio.run(run_model(path, question))
 
         # uploaded an image
         if request.form['action'] == 'upload':
@@ -50,6 +59,10 @@ def prediction():
             session['image'] = filename
 
             # save image data for later investigation
-            f.save(os.path.join(ROOT_DIR, f'main/web/static/media/uploaded/{filename}'))
+            f.save(os.path.join(Config.UPLOAD_DIR, '{filename}'))
 
-    return render_template('prediction.html', filename=filename, prediction=pred)
+    return render_template('prediction.html',
+                           filename=filename,
+                           question=question,
+                           prediction=pred,
+                           form=form)

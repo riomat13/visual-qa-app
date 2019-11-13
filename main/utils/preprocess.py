@@ -9,6 +9,8 @@ import numpy as np
 from keras_preprocessing.text import Tokenizer, tokenizer_from_json
 from keras_preprocessing.sequence import pad_sequences
 
+from main.settings import Config
+
 
 def one_hot_converter(labels, C):
     """Convert 1-d array of labels to 2-d matrix consist of one-hot vectors of labels.
@@ -23,7 +25,7 @@ def one_hot_converter(labels, C):
     return vector
 
 
-def text_processor(inputs, num_words=None, from_json=False):
+def text_processor(inputs='', num_words=None, *, from_json=False, from_config=False):
     """Process text with Tokenizer and pad_sequence from keras.
 
     Padding by 0 and fix the lengths to the logest one.
@@ -40,6 +42,9 @@ def text_processor(inputs, num_words=None, from_json=False):
             if this is set to `True`, created tokenizer object
             based on json string.
             if saved as json file, load it beforehand
+        from_config: boolean
+            if this is set to `True`, load file in location set in config
+            `from_json` will be ignored if both set to be `True`
 
     Returns:
         tokenizer function
@@ -92,9 +97,15 @@ def text_processor(inputs, num_words=None, from_json=False):
         >>> processor.vocab_size
         13
     """
-    if from_json:
+    if from_config:
+        with open(Config.MODELS.get('TOKENIZER'), 'r') as f:
+            config = f.read()
+        tokenizer = tokenizer_from_json(config)
+    elif from_json:
         tokenizer = tokenizer_from_json(inputs)
     else:
+        if isinstance(inputs, str):
+            inputs = [inputs]
         tokenizer = Tokenizer(num_words=num_words,
                               oov_token='<unk>',
                               filters='!"#$%&()*+,-./:;<=>?@[\\]^_`{|}~')
@@ -105,9 +116,12 @@ def text_processor(inputs, num_words=None, from_json=False):
         internal vocabulary.
 
         Args:
-            sentences: a list of texts(str)
+            sentences: str or a list of str
         """
         nonlocal tokenizer
+
+        if isinstance(sentences, str):
+            sentences = [sentences]
 
         tensor = tokenizer.texts_to_sequences(sentences)
         tensor = pad_sequences(tensor, padding='post')

@@ -18,6 +18,15 @@ class Config(object):
         b'\x93P\x8d\xaa8d\xce\xa1J\xca\x1d\xea\x88r\xfbH~\xfd\xb81f\xb3\xc3$'
     )
 
+    # prediction server
+    MODEL_SERVER = {
+        'host': 'localhost',
+        'port': 12345,
+    }
+
+    # upload directory
+    UPLOAD_DIR = os.path.join(ROOT_DIR, 'main/web/static/media/uploaded')
+
     # Database settings
     DATABASE_HOST = os.environ.get('DATABASE_HOST', 'localhost')
     DATABASE_PORT = os.environ.get('DATABASE_PORT', 3306)

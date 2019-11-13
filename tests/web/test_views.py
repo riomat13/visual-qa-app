@@ -45,8 +45,7 @@ class PredictionTest(unittest.TestCase):
         self.app_context.pop()
 
     def test_upload_image(self):
-        # TODO: check saved properly
-
+        # store image data into buffer temporarily
         with open('./main/web/static/media/tests/test_img1.jpg', 'rb') as f:
             test_img = io.BytesIO(f.read())
         response = self.client.post(
@@ -71,5 +70,4 @@ class PredictionTest(unittest.TestCase):
                     action='Submit',
                 )
             )
-            # jump to prediction page
-            self.assertEqual(response.status_code, 302)
+            self.assertEqual(response.status_code, 200)
