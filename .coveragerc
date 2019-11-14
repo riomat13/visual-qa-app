@@ -7,6 +7,7 @@ omit =
 omit =
     main/migrations/*
     main/settings/*
+    main/models/_models.py
 exclude_lines =
     def __repr__
     if __name__ == .__main__.:

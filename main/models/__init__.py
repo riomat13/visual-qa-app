@@ -2,10 +2,12 @@
 # -*- coding: utf-8 -*-
 
 from ._models import (
-    get_mobilenet_encoder,
-    Attention,
     QuestionTypeClassification,
     ClassificationModel,
+)
+from .common import (
+    get_mobilenet_encoder,
+    Attention,
     Encoder,
     Decoder
 )
