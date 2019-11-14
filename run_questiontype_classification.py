@@ -12,7 +12,7 @@ import json
 import numpy as np
 import tensorflow as tf
 
-from main.settings import ROOT_DIR
+from main.settings import Config
 from main.models import QuestionTypeClassification
 from main.models.train import train_cls_step
 from main.utils.loader import VQA, fetch_question_types
@@ -22,14 +22,18 @@ from main.metrics import calculate_accuracy
 # ignore tensorflow debug info
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
+DEBUG = False
+
 # dataset
 data_size = 30000
+vocab_size = 20000
 
 # parameters
 embedding_dim = 256
 hidden_units = 64
 
-batch_size = 32
+learning_rate = 0.005
+batch_size = 64
 epochs = 2
 
 # initialize labels
@@ -63,14 +67,6 @@ def main(*, training=True, save_to=None, load_from=None, val=0.2):
         q2id[q] if q in q2id else q2id['none of the above']
         for q in question_types]
 
-    # set text processor
-    if load_from is not None:
-        # has to reuse past tokenizer for consistency
-        with open('./.env/tokenizer_config.json', 'r') as f:
-            cfg = f.read()
-
-        processor = text_processor(cfg, from_json=True)
-    
     # build processor based on training dataset
     # if processor is not reused
     if training:
@@ -91,16 +87,18 @@ def main(*, training=True, save_to=None, load_from=None, val=0.2):
     model = QuestionTypeClassification(
         embedding_dim=embedding_dim,
         units=hidden_units,
-        vocab_size=processor.vocab_size+1,  # need to add 1 due to Embedding implementation
+        vocab_size=vocab_size,  # need to add 1 due to Embedding implementation
         num_classes=num_classes
     )
 
     # set initial weights to the model
     if load_from is not None:
+        print('Loading weights...')
         model.load_weights(load_from)
 
     # TRAINING STEP
     if training:
+        print('Start training')
         inputs_train = processor(inputs_train)
         inputs_val = [processor(inputs_val)]
 
@@ -111,31 +109,7 @@ def main(*, training=True, save_to=None, load_from=None, val=0.2):
         labels_val = labels[train_size:]
 
         loss = 0
-        optimizer = tf.keras.optimizers.Adam()
-
-
-        @tf.function
-        def training_step(inputs, labels, inputs_val, labels_val, num_classes):
-
-            # TODO: add validation step
-            with tf.GradientTape() as tape:
-                out = model(inputs)
-                loss = \
-                    tf.keras.losses.sparse_categorical_crossentropy(labels, out)
-                loss = tf.reduce_mean(loss)
-
-            trainables = model.trainable_variables
-            gradients = tape.gradient(loss, trainables)
-            optimizer.apply_gradients(zip(gradients, trainables))
-
-            # count correct predictions
-            accuracy = calculate_accuracy(out, labels)
-
-            # validation
-            out_val = model(inputs_val)
-            accuracy_val = calculate_accuracy(out_val, labels_val)
-
-            return loss, accuracy, accuracy_val
+        optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
 
         # execute training
         for epoch in range(epochs):
@@ -145,16 +119,25 @@ def main(*, training=True, save_to=None, load_from=None, val=0.2):
 
             dataset = data_generator(inputs_train, labels_train, batch_size)
 
-            for batch, (ins, outs) in enumerate(dataset, 1):
+            for batch, (ins, outs) in enumerate(dataset):
                 st = time.time()
                 ins = [ins]
                 batch_loss, accuracy, accuracy_val = \
-                    train_cls_step(model, ins, outs, optimizer, inputs_val, labels_val,
+                    train_cls_step(model, ins, outs, optimizer,
+                                   inputs_val, labels_val,
                                    loss='sparse_categorical_crossentropy')
-                    #training_step(ins, outs, inputs_val, labels_val, num_classes)
                 end = time.time()
 
                 if batch % 100 == 0:
+                    if DEBUG:
+                        print('[DEBUG] Batch:', batch)
+                        for layer in model.layers:
+                            print('  Layer:', model.name + ':' + layer.name)
+                            print('  Weights:')
+                            print('    mean:', np.mean(layer.get_weights()[0]))
+                            print('     std:', np.std(layer.get_weights()[0]))
+                            print()
+
                     batch_loss = batch_loss.numpy()
                     print('  Batch:', batch)
                     # TODO: add accuracy
@@ -215,9 +198,15 @@ if __name__ == '__main__':
     training = True ^ args.no_train
 
     file_name = args.save
-    save_to = f'{ROOT_DIR}/checkpoints/train/question_types/{file_name}'
+    save_to = os.path.join(Config.MODELS.get('QTYPE'), file_name)
+
+    st = time.time()
 
     model = main(training=training, load_from=load_from, save_to=save_to)
+
+    end = time.time()
+
+    print(f'Total time: {end - st:.4f}s.')
 
     if interactive:
         print()

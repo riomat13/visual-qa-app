@@ -19,9 +19,9 @@ class QuestionTypeClassification(tf.keras.Model):
         self.gru = tf.keras.layers.GRU(units,
                                        return_sequences=False,
                                        recurrent_initializer='glorot_uniform')
-        self.dense1 = tf.keras.layers.Dense(units, activation='relu')
-        self.dense2 = tf.keras.layers.Dense(256, activation='relu')
-        self.out_layer = tf.keras.layers.Dense(num_classes, activation='softmax')
+        self.dense1 = tf.keras.layers.Dense(units)
+        self.dense2 = tf.keras.layers.Dense(256)
+        self.out_layer = tf.keras.layers.Dense(num_classes)
 
     def call(self, sequences):
         x = self.embedding(sequences)
