@@ -5,6 +5,7 @@ from ._models import (
     get_mobilenet_encoder,
     Attention,
     QuestionTypeClassification,
+    ClassificationModel,
     Encoder,
     Decoder
 )
