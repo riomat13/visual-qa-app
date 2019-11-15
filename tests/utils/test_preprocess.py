@@ -119,6 +119,20 @@ class TextProcessorTest(unittest.TestCase):
         for word in processor.word_index.keys():
             self.assertTrue(re.search(r'^<\w+>$', word))
 
+    def test_fixed_vocab_size(self):
+        num_words = 100
+        start = 99
+        processor = text_processor(num_words=num_words, from_config=True)
+
+        # only words whose ids are less than 100 work
+        test_sents = ' '.join(
+            processor.index_word[i] for i in range(start, 200)
+        )
+
+        processed = processor(test_sents)
+        num_kinds_of_words = len(set(id for id in processed[0]))
+        self.assertEqual(num_kinds_of_words, num_words-start+1)
+
 
 class OneHotEncodingTest(unittest.TestCase):
 

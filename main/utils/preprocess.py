@@ -140,7 +140,11 @@ def text_processor(inputs='', num_words=None, maxlen=None, *, from_json=False, f
         tokenizer.word_index['<pad>'] = 0
         tokenizer.index_word[0] = '<pad>'
 
-        processor.vocab_size = len(tokenizer.word_index)
+        if num_words is not None:
+            tokenizer.num_words = num_words
+            processor.vocab_size = num_words
+        else:
+            processor.vocab_size = len(tokenizer.word_index)
         processor.index_word = tokenizer.index_word
         processor.word_index = tokenizer.word_index
 
