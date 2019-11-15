@@ -3,29 +3,41 @@
 This is a challenge to build Question Answering with Attention by images.
 All images are from [COCO](http://cocodataset.org/), and quesion/answer dataset is from [VQA](https://visualqa.org/).
 
+Note) In this project, I use one laptop, and *Jetson TX2* for training model, another PC is used to develop web API. Therefore, I can not make enough time to run and test models a lot and simultaneously.
+
 ## Requirements
 This model and app is running with these libraries in following versions.
+See more detail in `requirements.txt`.
 
 ```python
 python==3.7
+
+flask==1.1.1
+Flask-WTF==0.14.2
+Keras-Applications==1.0.8
+Keras-Preprocessing==1.1.0
 numpy==1.17.3
+Pillow==6.2.1
+SQLAlchemy==1.3.10
 tensorflow==2.0
 ```
 
 ## 1st week - define the problem
-Research related papers, models etc.
-Data preprocessing.
+This is *Visual Question Answering* problem. Due to limited resources and time and this includes deploying as simple web app, multiple models will be built and may not solve all question types. Therefore, it might be "Can't answer the question" as the answer. If I have additional time to develop this, may change structure but for now, I will make progress with this way. Followings are the some details about the steps.
 
 ### Data structure
 Original json files. (These data should be downloaded from [website](https://visualqa.org/).)
-Annotation: `data/annotations/v2_mscoco_train2014_annotations.json`(file name is modified)
-Questions: `data/questions/v2_mscoco_train2014_questions.json`
-Images: `data/train2014/COCO_train2014_{image_id:012d}.jpg`
+
+- Annotation: `data/annotations/v2_mscoco_train2014_annotations.json`(file name is modified)
+
+- Questions: `data/questions/v2_mscoco_train2014_questions.json`
+
+- Images: `data/train/processed/{image_id:06d}.npy` (Encoded by *MobileNet* to save process time in training)
 
 ### Structure of networks
 
 #### 1. Image Encoding
-In order to simplify the problem, Use *transfer learning* with `tf.keras.applications.MobileNet` for image encoding parts. It actually is not necessary to classify the images so that the last parameters will be used as input of decoder step. (It will be talked about decoder step later section.)
+In order to simplify the problem, Use *transfer learning* with `tf.keras.applications.MobileNet` for image encoding parts, which is based on *MobileNet*[4]. It actually is not necessary to classify the images so that the last parameters will be used as input of decoder step. (It will be talked about decoder step later section.)
 
 #### 2. Question type classification
 Use *RNN* to capture sentences information and apply simple classification.
@@ -51,24 +63,57 @@ python run_questiontype_classification.py
 python run_questiontype_classification.py -i
 ```
 
+### Answering Yes/No
+As the easier problem to answer yes or no than to do with sentence, I thought it should be the good place to start.
+However, since answering given question based on image, it has to encode both question and image and process those data and make prediction.
+
+After a bunch of trials & errors, I could get better result applying *Attention* to both image and sentence. I could see how weighted the words in sentence. (Surely padded words has low importance, but some actual words have high ones and it looks working. However, all existing words still have higer values in many times so that it is need to more improvement)
+
+This problem will be the base to build others. Therefore carefully chose networks. (Technically, many of networks failed to learn, and only work with *Attention* with additive way[5].)
+
+```python
+python run_yes_no_answering_model.py
+
+# for tensorflow 1.14 (this is only used for developing model)
+python run_yes_no_answering_model.1.14.py
+```
+
+### Answering to 'What is/are...' type question
+This should be one of the most common types of question about images, so that this is the second priority to build model. This is going to be used *Attention* such like *Yes/No* answering but answer is decoded by *seq2seq* model. That is, pass the beggining word, and predict words one by one and eventually generate the answer.
+
+
 ### Web Application
 In order to access model, web API will be implemented, which is built with `flask`.
 This is for serving models created, therefore it may not be developed for UI, but just for API.
 
 ## 2nd week - build minimum model
-Build minimum vaiable product(MVP) model. Send data by API and return the results by `json` format.
+In order to make simplify the model, I decided to split the problems into smaller ones.
+For instance, firstly, classify the problem such as "this is closed/opened question", or 
+this question asks 'what' or 'where' or others" and so on.
+And then, build other models based on the results.
+
+To develop simplest models, I started from *closed* question such as *'yes'* or *'no'*. Although it is simple classification problem, it is hard to predict since the answers are based on given images. Therefore, *Attention Mechanism* is used to get important information from both sentences(questions) and images.
+
+As I mentioned, it is hard to get good result, therefore it took so much time to build models and also there is still *high variance*, which could not be resolved by simple regularization nor adding more data. There may be better ways to resolve this but since this is limited time project, I moved on to next step.
 
 ## 3rd week - deploy with simple structure
-Make the model robust. Build interface to serve the model.
+Developing simple web UI to upload an image and ask a question. I have used `flask` for it, and it can serve the result (for now(11/14), it can only return question type, because closed question model is still running in training).
+
+Additionally, one of the most frequent question type is *'what is/are ...'* so that started to build models. The base structure is quite similar to closed question model. The only difference is that in decoding step, *seq-to-seq* like model so that the previous word is passed and predict the next word (initial word is '<BOS>' to ).
 
 ## 4th week - scaling
 Scaling and deploy.
 
 ## Additional weeks
-Add more features such as rich UI or additional pages in web pages.
+Add more features such as rich UI or additional pages in web pages. What done in this project will be the baseline, and try to improve the result with the same dataset.
 
 ## Reference:
-- [COCO](http://cocodataset.org/)
-- [VQA](https://visualqa.org/)
-- [Image Captioning(tensorflow official)](https://www.tensorflow.org/tutorials/text/image_captioning)
-- A.G. Howard et al, MobileNets: Efficient Convolutional Neural Networks for Mobile Vision Applications, 2017 [[link]](https://arxiv.org/abs/1704.04861)
+[1] [COCO](http://cocodataset.org/)
+
+[2] [VQA](https://visualqa.org/)
+
+[3] [Image Captioning(tensorflow official)](https://www.tensorflow.org/tutorials/text/image_captioning)
+
+[4] A.G. Howard et al., MobileNets: Efficient Convolutional Neural Networks for Mobile Vision Applications, 2017 [[link]](https://arxiv.org/abs/1704.04861)
+
+[5] D. Bahdanau et al., Neural Machine Translation by Jointly Learning to Align and Translate, 2014 [[link]](https://arxiv.org/abs/1409.0473)
