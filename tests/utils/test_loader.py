@@ -33,12 +33,12 @@ JSON_DATA = {
 class ImageLoaderTest(unittest.TestCase):
 
     def test_image_loader(self):
-        path = 'data/train2014/COCO_train2014_000000000009.jpg'
+        path = 'tests/data/test_img1.jpg'
         img = load_image(path)
         self.assertEqual(img.shape, (224, 224, 3))
 
     def test_image_loader_simple(self):
-        path = 'data/train2014/COCO_train2014_000000000009.jpg'
+        path = 'tests/data/test_img1.jpg'
         img = load_image_simple(path)
         self.assertEqual(img.shape, (224, 224, 3))
 

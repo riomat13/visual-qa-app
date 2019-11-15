@@ -27,7 +27,7 @@ def load_image(img_path):
         img_path: str
             path to an image file
     Returns:
-        Tensor object with shape=(224, 2224, 3), dtype=float32
+        Tensor object with shape=(224, 224, 3), dtype=float32
     """
     # https://www.tensorflow.org/tutorials/text/image_captioning
     img = tf.io.read_file(img_path)
@@ -49,7 +49,7 @@ def load_image_simple(img_path):
     Returns:
         numpy.ndarray with shape=(224, 224, 3), dtype=float32
     """
-    img = image.load_img(img_path)
+    img = image.load_img(img_path, target_size=(224, 224))
     img = image.img_to_array(img)
     return img
 
