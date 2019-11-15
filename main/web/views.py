@@ -20,7 +20,7 @@ def index():
 
 @base.route('/prediction', methods=['GET', 'POST'])
 def prediction():
-    filename = None
+    filename = session.get('image', None)
     question = None
     pred = None
 
@@ -32,16 +32,10 @@ def prediction():
             question = form.question.data
             form.question.data = ''
 
-            # handle uploaded image
-            filename = session.get('image')
-            # TODO: make reusable, add remove current image button
-            if filename is not None:
-                session.pop('image')
-            else:
+            if filename is None:
                 flash('Image is not provided')
                 return redirect(url_for('base.prediction'))
 
-            # TODO: add form for sentence
             path = os.path.join(Config.UPLOAD_DIR, filename)
             pred = asyncio.run(run_model(path, question))
 
