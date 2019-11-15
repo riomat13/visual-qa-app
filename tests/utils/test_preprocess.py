@@ -3,6 +3,7 @@
 
 import unittest
 
+import re
 import random
 
 import numpy as np
@@ -102,6 +103,24 @@ class TextProcessorTest(unittest.TestCase):
         processed = processor_from_json(sample_text)
 
         self.assertTrue(np.all(processed == target))
+
+    def test_from_config(self):
+        # use preprocessed config
+        processor = text_processor(from_config=True)
+        self.assertGreater(processor.vocab_size, 0)
+
+    def test_angle_brackets_not_filtered(self):
+        sample = '<these> <are> <sample> <tags>'
+        processor = text_processor(sample)
+        processed = processor(sample)
+        self.assertEqual(processed.shape, (1, len(sample.split())))
+
+        # check all registered vocabulary has <> tags
+        for word in processor.word_index.keys():
+            self.assertTrue(re.search(r'^<\w+>$', word))
+
+
+class OneHotEncodingTest(unittest.TestCase):
 
     def test_one_hot_encoding(self):
         n = 5

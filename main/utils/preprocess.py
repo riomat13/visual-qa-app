@@ -113,7 +113,7 @@ def text_processor(inputs='', num_words=None, maxlen=None, *, from_json=False, f
             inputs = [inputs]
         tokenizer = Tokenizer(num_words=num_words,
                               oov_token='<unk>',
-                              filters='!"#$%&()*+,-./:;<=>?@[\\]^_`{|}~')
+                              filters='!"#$%&()*+,-./:;=?@[\\]^_`{|}~')
         tokenizer.fit_on_texts(inputs)
 
     def processor(sentences):
