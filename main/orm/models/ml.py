@@ -40,6 +40,9 @@ class MLModel(BaseMixin, Base):
     metrics = Column(String(32), nullable=True)
     score = Column(Float, nullable=True)
 
+    # TODO: make relationship with scores as one-to-many
+    #predictions = relationship('RequestLog', backref='ml_model')
+
 
 class PredictionModel(BaseMixin, Base):
     """Models used for prediction."""
@@ -56,11 +59,19 @@ class ModelLog(ModelLogMixin, BaseMixin, Base):
     # TODO
 
 
-class ModelRequestLog(ModelLogMixin, BaseMixin, Base):
-    """Logs when request to run model."""
-    __tablename__ = 'model_request_log'
+class RequestLog(ModelLogMixin, BaseMixin, Base):
+    """Logs when got request to predict."""
+    __tablename__ = 'request_log'
 
-    # TODO
+    # file name to be used for prediction
+    filename = Column(String(64), nullable=False)
+    # question about image
+    question_type = Column(String(32), nullable=False)
+    question = Column(String(128), nullable=False)
+
+    # TODO: uncomment after store model data to db
+    #model_id = Column(Integer, ForeignKey('prediction_model.id'))
+    #model = relationship('PredictionModel')
 
 
 class PredictionScore(BaseMixin, Base):
@@ -69,30 +80,26 @@ class PredictionScore(BaseMixin, Base):
 
     # just in case if not rated
     rate = Column(Integer, nullable=True)
-    # file name to be used for prediction
-    filename = Column(String(64), nullable=False)
-    # question about image
-    question = Column(String(128), nullable=False)
     # predicted answers
     prediction = Column(String(128), nullable=False)
+    # likelihood probability for the answer
+    # TODO: should not be nullable
+    probability = Column(Float)
     # ideal answer (optional)
-    question_type = Column(String(32), nullable=True)
     answer = Column(String(128), nullable=True)
+
     predicted_time = Column(DateTime, default=datetime.utcnow())
 
-    model_id = Column(Integer, ForeignKey('prediction_model.id'))
-    model = relationship('PredictionModel')
+    log_id = Column(Integer, ForeignKey('request_log.id'))
+    log = relationship('RequestLog')
 
-    def __init__(self, filename, question, prediction, rate=None, **kwargs):
+    def __init__(self, prediction, log, rate=None, **kwargs):
         """Predicted score.
 
         Args:
-            filename: str
-                original image filename
-            question: str
-                asked question about given image
             prediction: str
                 predicted answer
+            log: RequestLog model
             rate(optional): int
                 rate the result, 1 - 5
             question_type(optional): str
@@ -104,8 +111,13 @@ class PredictionScore(BaseMixin, Base):
         if rate is not None:
             if not 0 < rate < 6:
                 raise ValueError('Rate must be chosen from 1 to 5')
-        super(PredictionScore, self).__init__(filename=filename,
-                                              question=question,
-                                              prediction=prediction,
+        super(PredictionScore, self).__init__(prediction=prediction,
+                                              log=log,
                                               rate=rate,
                                               **kwargs)
+
+    def update(self, question_type, answer):
+        """Update information for later label."""
+        self.question_type = question_type
+        self.answer = answer
+        self.save()

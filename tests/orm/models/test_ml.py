@@ -8,7 +8,7 @@ set_config('test')
 
 from .base import _Base
 from main.orm.models.ml import (
-    MLModel, ModelLog, ModelRequestLog, PredictionScore
+    MLModel, ModelLog, RequestLog, PredictionScore
 )
 
 SAMPLE_TEXT = 'sample text'
@@ -42,14 +42,19 @@ class ModelLogTest(_Base):
         self.assertEqual(log.log_text, data.log_text)
 
 
-class ModelRequestLogTest(_Base):
+class RequestLogTest(_Base):
 
     def test_model_request_log_saved(self):
-        log = ModelRequestLog(log_type='success', log_text=SAMPLE_TEXT)
+        log = RequestLog(
+            filename='test.txt',
+            question_type='test',
+            question='is this test',
+            log_type='success',
+            log_text=SAMPLE_TEXT)
 
         log.save(session=self.session)
 
-        data = ModelRequestLog.query(session=self.session).first()
+        data = RequestLog.query(session=self.session).first()
 
         self.assertEqual(log.id, data.id)
         self.assertEqual(log.log_text, data.log_text)
@@ -58,12 +63,24 @@ class ModelRequestLogTest(_Base):
 class PredictionScoreTest(_Base):
 
     def test_model_saved_properly(self):
-        pred = PredictionScore('sample.jpg', 'some question', 'some result', rate=1)
+        log = RequestLog(
+            filename='test',
+            question_type='test',
+            question='test',
+            log_type='success',
+            log_text='none')
+        log.save()
+
+        pred = PredictionScore('some result',
+                               log=log,
+                               rate=1)
         pred.save(session=self.session)
 
         data = PredictionScore.query(session=self.session).first()
+        # check saved properly
         self.assertEqual(pred.id, data.id)
-        self.assertEqual(pred.filename, data.filename)
+        # check make relationship with log
+        self.assertEqual(pred.log_id, log.id)
 
 
 if __name__ == '__main__':
