@@ -103,7 +103,7 @@ def text_processor(inputs='', num_words=None, maxlen=None, *, from_json=False, f
         13
     """
     if from_config:
-        with open(Config.MODELS.get('TOKENIZER'), 'r') as f:
+        with open(Config.MODELS['TOKENIZER'].get('path'), 'r') as f:
             config = f.read()
         tokenizer = tokenizer_from_json(config)
     elif from_json:

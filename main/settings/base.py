@@ -33,7 +33,11 @@ class Config(object):
         # what
         'WHAT': os.path.join(ROOT_DIR, 'checkpoints', 'what'),
         # text_tokenizer config file path
-        'TOKENIZER': os.path.join(ROOT_DIR, 'data', 'tokenizer_config.json'),
+        'TOKENIZER': {
+            'path': os.path.join(ROOT_DIR, 'data', 'tokenizer_config.json'),
+            # use fixed vocab size to keep embedding from larger
+            'vocab_size': 20000,
+        }
     }
 
     # upload directory
