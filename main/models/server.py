@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import os.path
 import asyncio
 import logging
 
 from main.utils.loader import load_image_simple as load_image
 from main.orm.models.ml import ModelRequestLog
-from main.models.infer import predict_question_type
+from main.models.infer import predict_question_type, awake_models
 
 log = logging.getLogger(__name__)
 
@@ -22,11 +23,16 @@ async def run_prediction(reader, writer):
     data = await reader.read(1024)
     filepath, sentence = data.decode().split('\t')
 
-    # TODO: make active after build model
-    #img = load_image(filepath)
+    if not os.path.isfile(filepath):
+        log.warning('Could not find image')
+        pred = predict_question_type(sentence)
+    else:
+        # process image
+        #img = load_image(filepath)
 
-    # TODO: add prediction pipeline
-    pred = predict_question_type(sentence)
+        # TODO: add prediction pipeline
+        pred = predict_question_type(sentence)
+
     writer.write(pred.encode())
     await writer.drain()
     writer.close()
@@ -36,6 +42,9 @@ async def run_prediction(reader, writer):
 
 
 async def run_server(host, port):
+    # load models to make run faster to serve
+    awake_models()
+
     server = await asyncio.start_server(
         run_prediction, host, port)
     addr = server.sockets[0].getsockname()
