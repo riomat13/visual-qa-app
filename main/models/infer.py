@@ -11,7 +11,7 @@ from main.settings import Config
 from main.utils.loader import fetch_question_types
 from main.utils.preprocess import text_processor
 from ._base import BaseModel
-from ._models import QuestionTypeClassification
+from ._models import QuestionTypeClassification, ClassificationModel
 
 log = logging.getLogger(__name__)
 
@@ -76,7 +76,7 @@ def _get_q_type_model():
             model = QuestionTypeClassification(
                 embedding_dim=256,
                 units=64,
-                vocab_size=processor.vocab_size,
+                vocab_size=Config.MODELS['TOKENIZER'].get('vocab_size'),
                 num_classes=num_classes,
             )
             _set_weights_by_config('QTYPE', model)
@@ -88,20 +88,35 @@ def _get_q_type_model():
 
 def _get_y_n_model():
     """Predict to answer `yes` or `no`."""
-    raise NotImplementedError('Not implemented model yet')
-
     model = None
 
     def build_model():
         nonlocal model
 
         if model is None:
-            model = None
+            model = ClassificationModel(256,
+                                        Config.MODELS['TOKENIZER'].get('vocab_size'),
+                                        embedding_dim=256,
+                                        num_classes=3)
             _set_weights_by_config('Y/N', model)
 
         return model
 
     return build_model()
+
+
+def awake_models():
+    """Set up models initially."""
+    # ignore tqdm if not installed
+    try:
+        from tqdm import tqdm
+    except ModuleNotFoundError:
+        tqdm = lambda x: x
+
+    # TODO: add models
+    for func in tqdm([_get_q_type_model, _get_y_n_model]):
+        log.info(f'Loding model: {func.__name__}')
+        func()
 
 
 # TODO: temporary prediction function
