@@ -9,6 +9,7 @@ set_config('test')
 
 from main.web.app import create_app
 from main.orm.db import Base, engine
+from main.orm.models.ml import RequestLog
 
 
 class _Base(unittest.TestCase):
@@ -76,3 +77,24 @@ class QuestionTypeTest(_Base):
 
         # execute server by run_model function
         mock_async_run.assert_called_once_with(test_return)
+
+
+class QuestionTypeLogsTest(_Base):
+
+    @patch('main.web.api._api.RequestLog.query')
+    def test_extract_logs(self, mock_query):
+        model = Mock(RequestLog())
+        model.to_dict.return_value = {'key': 'test'}
+        size = 4
+
+        mock_query.return_value = [model] * size
+
+        # TODO: filter by question type
+        response = self.client.get('/api/question_type/logs')
+        self.assertEqual(response.status_code, 200)
+        data = response.json
+
+        self.assertEqual(len(data), size)
+
+        for log in data:
+            self.assertEqual(log.get('key'), 'test')

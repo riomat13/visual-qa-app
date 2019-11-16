@@ -6,7 +6,7 @@ import asyncio
 from flask import request, jsonify, session
 
 from . import api
-from main.orm.models.ml import MLModel
+from main.orm.models.ml import MLModel, RequestLog
 from main.orm.db import provide_session
 from main.models.client import run_model
 
@@ -28,3 +28,11 @@ def predict_question_type(session=None):
     pred = asyncio.run(run_model('', question))
     return jsonify({'question': question,
                     'answer': pred})
+
+
+# TODO: add POST to filter by question type
+@api.route('/question_type/logs')
+@provide_session
+def question_type_logs(session=None):
+    logs = RequestLog.query(session=session)
+    return jsonify([log.to_dict() for log in logs])
