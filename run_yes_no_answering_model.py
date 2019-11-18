@@ -40,20 +40,21 @@ load_config = False
 # train
 image_seq = 49
 pad_max_len = 15  # max length from dataset is 22 and longer than 15 is < 0.1%
-data_size = 120000
+data_size = 150000
 embedding_dim = 256
-units = 256
+vocab_size = 20000
+units = 256  # used for attention
 
 # due to high variance
 dropout_cls1 = 0.
 dropout_cls2 = 0.
 dropout_cls3 = 0.
 
-learning_rate = 0.005
+learning_rate = 0.001
 
 batch_size = min(64, data_size)  # for adjusting to testing
-epochs = 40
-display_step = 200
+epochs = 30
+display_step = 500
 
 # make easy to calculate accuracy and loss by average
 step_per_val = 100
@@ -82,14 +83,14 @@ def data_process(dataset):
     qs = processor(qs)
 
     answers = np.array([1 if d['answer'] == 'yes' else 0
-                        if d['answer'] =='no' else 2 for d in dataset], dtype=np.int32)
+                        if d['answer'] == 'no' else 2 for d in dataset], dtype=np.int32)
     imgs = np.array([np.load(d['image_path'], allow_pickle=True) for d in dataset])
 
     return qs, answers, imgs
 
 
 def main(train, val, training=True, save=False):
-    min_loss = float('inf')
+    max_acc = 0
 
     model = ClassificationModel(units, processor.vocab_size, embedding_dim, 3)
 
@@ -123,13 +124,13 @@ def main(train, val, training=True, save=False):
 
                 if DEBUG:
                     print('[DEBUG] Batch: {}'.format(batch))
-                    print('[DEBUG] Average weights :'.format(batch))
-                    for layer in model.layers:
-                        print('  Layer:', model.name + ':' + layer.name)
-                        print('  Weights:')
-                        print('    mean:', np.mean(layer.get_weights()[0]))
-                        print('     std:', np.std(layer.get_weights()[0]))
-                        print()
+                    #print('[DEBUG] Average weights :'.format(batch))
+                    #for layer in model.layers:
+                    #    print('  Layer:', model.name + ':' + layer.name)
+                    #    print('  Weights:')
+                    #    print('    mean:', np.mean(layer.get_weights()[0]))
+                    #    print('     std:', np.std(layer.get_weights()[0]))
+                    #    print()
                     print('[DEBUG] Prediction:')
                     #print('   values:\n', pred.reshape(-1, 3))
                     print('   Pred:\n    ', np.argmax(pred, axis=-1))
@@ -171,9 +172,10 @@ def main(train, val, training=True, save=False):
         print('  Total time per epoch: {:.4f}s'.format(time.time() - epoch_start))
         print()
 
-        # save when get the lowest validation loss
-        if loss_val < min_loss:
-            min_loss = loss_val
+        # save when get the highest accuracy in validation
+        score = acc_val - loss_val
+        if acc_val > max_acc:
+            max_acc = acc_val
             print('Saving model weights')
             model.save_weights(os.path.join(Config.MODELS.get('Y/N'), 'weights'))
             print('Saved!')
@@ -221,7 +223,7 @@ if __name__ == '__main__':
         processor = text_processor(words, maxlen=pad_max_len)
         assert processor(words).shape[1] == pad_max_len
     else:
-        processor = text_processor(maxlen=pad_max_len, from_config=True)
+        processor = text_processor(num_words=vocab_size, maxlen=pad_max_len, from_config=True)
 
     print('Time to setup: {:.4f}s'.format(time.time() - st))
 
