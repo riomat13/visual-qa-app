@@ -9,7 +9,7 @@ __pycache__/
 preprocess*.py
 
 # data / database
-static/
+media/
 data/
 checkpoints/
 */migrations/versions/
