@@ -1,5 +1,7 @@
 {% extends 'base.html' %}
+{% set active = 'home' %}
 {% block content %}
 <h2>Top page</h2>
+<p>This is Visual Question Answering project page.</p>
 <p>Go to <a href="{{ url_for('base.prediction') }}">Prediction page</a></p>
 {% endblock content %}

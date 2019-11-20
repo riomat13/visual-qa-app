@@ -1,0 +1,107 @@
+* {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+}
+
+h1, h2 {
+    padding: 12px;
+}
+
+p {
+    margin: 4px;
+}
+
+input[type=text] {
+    font-size: 1.0rem;
+    padding: 8px 14px;
+    margin: 8px 0;
+}
+
+.navbar {
+    background-color: #444;
+}
+
+.navbar ul {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.navbar li {
+  float: left;
+}
+
+.navbar li a {
+    display: block;
+    padding: 14px 16px;
+    font-size: 1.2rem;
+    text-align: center;
+    color: #eee;
+    text-decoration: none;
+}
+
+.navbar li a:hover {
+    background-color: #777;
+    color: #fff;
+}
+
+.navbar li a.active {
+    background-color: #2f2f2f;
+    pointer-events: none;
+    cursor: default;
+}
+
+.container {
+    margin: 0;
+    padding: 16px;
+    height: 100%;
+    width: 100%;
+}
+
+.prediction-form {
+    padding: 20px;
+}
+
+.prediction-form img {
+    margin: 20px 0;
+}
+
+.btn {
+    display: inline-block;
+    border: none;
+    text-align: center;
+    text-decoration: none;
+}
+
+.btn:hover {
+    cursor: pointer;
+    opacity: 0.8;
+}
+
+.btn-md {
+    font-size: 1.0rem;
+    padding: 10px 16px;
+    border-radius: 4px;
+}
+
+.btn-sm {
+    font-size: 0.9rem;
+    padding: 8px 12px;
+    border-radius: 3px;
+}
+
+.btn-primary {
+    background-color: #2196F3;
+    color: #fff;
+}
+
+.btn-success {
+    background-color: #4CAF50;
+    color: #fff;
+}
