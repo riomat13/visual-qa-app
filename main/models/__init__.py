@@ -4,10 +4,12 @@
 from ._models import (
     QuestionTypeClassification,
     ClassificationModel,
+    QuestionImageEncoder,
+    SequenceGeneratorModel,
 )
 from .common import (
     get_mobilenet_encoder,
     Attention,
     Encoder,
-    Decoder
+    Decoder,
 )
