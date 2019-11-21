@@ -2,9 +2,15 @@
 # -*- coding: utf-8 -*-
 
 import os
+import logging
 from pathlib import Path
 
 import uuid
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s'
+)
 
 ROOT_DIR = Path(__file__).parents[2]
 
@@ -27,16 +33,29 @@ class Config(object):
     # model information
     MODELS = {
         # question type classification
-        'QTYPE': os.path.join(ROOT_DIR, 'checkpoints', 'question_types'),
+        'QTYPE': {
+            'path': os.path.join(ROOT_DIR, 'checkpoints', 'question_types'),
+            'vocab_size': 20000,
+            'embedding_dim': 256,
+            'units': 64,
+        },
         # yes/no
-        'Y/N': os.path.join(ROOT_DIR, 'checkpoints', 'y_n'),
+        'Y/N': {
+            'path': os.path.join(ROOT_DIR, 'checkpoints', 'y_n'),
+            'vocab_size': 20000,
+            'embedding_dim': 256,
+            'units': 256,
+        },
         # what
-        'WHAT': os.path.join(ROOT_DIR, 'checkpoints', 'what'),
+        'WHAT': {
+            'path': os.path.join(ROOT_DIR, 'checkpoints', 'what'),
+            'vocab_size': 20000,
+            'embedding_dim': 256,
+            'units': 256,
+        },
         # text_tokenizer config file path
         'TOKENIZER': {
             'path': os.path.join(ROOT_DIR, 'data', 'tokenizer_config.json'),
-            # use fixed vocab size to keep embedding from larger
-            'vocab_size': 20000,
         }
     }
 
