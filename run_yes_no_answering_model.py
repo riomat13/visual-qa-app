@@ -23,7 +23,7 @@ import tensorflow as tf
 
 from main.settings import Config
 from main.models import ClassificationModel
-from main.models.train import train_cls_step
+from main.models.train import make_training_cls_model
 from main.utils.preprocess import text_processor
 
 if tf.__version__ < '2.0.0':
@@ -45,11 +45,6 @@ embedding_dim = 256
 vocab_size = 20000
 units = 256  # used for attention
 
-# due to high variance
-dropout_cls1 = 0.
-dropout_cls2 = 0.
-dropout_cls3 = 0.
-
 learning_rate = 0.001
 
 batch_size = min(64, data_size)  # for adjusting to testing
@@ -69,7 +64,7 @@ def data_generator(dataset, batch_size):
         batch = dataset[start:start+batch_size]
         qs, answers, imgs = data_process(batch)
 
-        yield qs, answers, imgs
+        yield (qs, imgs), answers
 
 
 # Load data predprocessed
@@ -83,18 +78,22 @@ def data_process(dataset):
     qs = processor(qs)
 
     answers = np.array([1 if d['answer'] == 'yes' else 0
-                        if d['answer'] == 'no' else 2 for d in dataset], dtype=np.int32)
-    imgs = np.array([np.load(d['image_path'], allow_pickle=True) for d in dataset])
+                        if d['answer'] == 'no' else 2
+                        for d in dataset], dtype=np.int32)
+    imgs = np.array([np.load(d['image_path'], allow_pickle=True)
+                     for d in dataset])
 
     return qs, answers, imgs
 
 
-def main(train, val, training=True, save=False):
+def main(train, val, *, save=False):
     max_acc = 0
 
-    model = ClassificationModel(units, processor.vocab_size, embedding_dim, 3)
-
+    # set up training model
+    model = ClassificationModel(units, pad_max_len, processor.vocab_size, embedding_dim, 3)
     optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
+    train_cls_step = make_training_cls_model(model, optimizer,
+                                             'sparse_categorical_crossentropy')
 
     for epoch in range(1, epochs+1):
         epoch_start = time.time()
@@ -102,27 +101,19 @@ def main(train, val, training=True, save=False):
         print('  Epochs:', epoch)
         print('=====' * 10)
 
-        batch_start = time.time()
+        batch_st = time.time()
 
         random.shuffle(train)
 
-        for batch, (questions, labels, img_features) \
+        for batch, (inputs, labels) \
                 in enumerate(data_generator(train, batch_size=batch_size)):
             st = time.time()
 
-            loss, acc, _ = \
-                train_cls_step(model,
-                               (img_features, questions),
-                               labels,
-                               optimizer=optimizer)
-
-            end_calc = time.time()
+            loss, acc = train_cls_step(inputs, labels)
 
             if batch % display_step == 0:
-                pred, weights = model(img_features, questions)
-                acc = calculate_accuracy(pred, labels)
-
                 if DEBUG:
+                    pred, weights = model(*inputs)
                     print('[DEBUG] Batch: {}'.format(batch))
                     #print('[DEBUG] Average weights :'.format(batch))
                     #for layer in model.layers:
@@ -140,41 +131,53 @@ def main(train, val, training=True, save=False):
                     print(*[processor.index_word[q] for q in questions[0] if q > 0])
                     print()
 
+                end = time.time()
+                batch_end = time.time()
                 print('    Batch -', batch)
-                print('      Train:  Loss - {:.4f}  Acc - {:.4f}  Time(calc) - {:.4f}s/batch  Time(total) - {:.4f}s/batch'
-                        .format(loss, acc, end_calc-st, time.time()-batch_start))
+                print('      Train:  Loss - {:.4f}  Acc - {:.4f}  '
+                      'Time(calc) - {:.4f}s/batch  '
+                      'Time(total) - {:.4f}s/batch'.format(loss, acc,
+                                                           end-st,
+                                                           batch_end-batch_st)
+                      )
 
-            batch_start = time.time()
+            batch_st = time.time()
 
-        # after finished training in each epoch
-        # evaluate model by validation dataset
         loss_val = 0
         acc_val = 0
-        st_val = time.time()
+        count = 0
 
-        for q_val, l_val, i_val in data_generator(val, batch_size=batch_size):
-            pred_val, _ = model(i_val, q_val)
-            l_val = l_val.ravel()
+        val_st = time.time()
 
-            _loss_val = tf.keras.losses.sparse_categorical_crossentropy(l_val, pred_val, from_logits=True)
-            _loss_val = tf.reduce_mean(_loss_val, axis=-1)
-            loss_val += _loss_val
-            acc_val += calculate_accuracy(pred_val, l_val)
+        # calculate validation data
+        for in_val, l_val in data_generator(val, batch_size=batch_size):
+            out_val = model(*in_val)
+            if isinstance(out_val, tuple):
+                out_val = out_val[0]
+            cost = tf.keras.losses.sparse_categorical_crossentropy(
+                l_val,
+                out_val,
+                from_logits=True
+            )
+            loss_val += tf.reduce_mean(cost)
+            acc_val += calculate_accuracy(out_val, l_val)
+            count += 1
 
-        loss_val /= step_per_val
-        acc_val /= step_per_val
+        # calculate average
+        loss_val /= count
+        acc_val /= count
 
-        end_val = time.time()
+        val_end = time.time()
 
         print()
-        print('      Validation(approx.): Loss - {:.4f}  Acc - {:.4f}  Time - {:.4f}s'
-                .format(loss_val, acc_val, end_val-st_val))
+        print('      Validation(approx.): Loss - {:.4f}  Acc - {:.4f}  '
+              'Time - {:.4f}s'.format(loss_val, acc_val, val_end-val_st))
         print('  Total time per epoch: {:.4f}s'.format(time.time() - epoch_start))
         print()
 
         # save when get the highest accuracy in validation
         score = acc_val - loss_val
-        if acc_val > max_acc:
+        if save and acc_val > max_acc:
             max_acc = acc_val
             print('Saving model weights')
             model.save_weights(os.path.join(Config.MODELS.get('Y/N'), 'weights'))
@@ -182,21 +185,8 @@ def main(train, val, training=True, save=False):
 
 
 if __name__ == '__main__':
-    import argparse
-
-    parser = argparse.ArgumentParser(description='Run model to answer yes/no')
-    parser.add_argument(
-        '--no-config', default=False, action='store_true',
-        help='build text tokenizer from scratch'
-    )
-    parser.add_argument(
-        '-p', '--path', type=str, default=None,
-        help='path to model weights if reuse pretrained'
-    )
-    parser.add_argument(
-        '--debug', default=False, action='store_true',
-        help='run with debug mode'
-    )
+    from main.utils import make_parser
+    parser = make_parser()
 
     args = parser.parse_args()
 
@@ -204,6 +194,8 @@ if __name__ == '__main__':
 
     if DEBUG:
         np.set_printoptions(precision=4)
+
+    save = args.no_save
 
     st = time.time()
     print('Setting up dataset')
@@ -227,7 +219,7 @@ if __name__ == '__main__':
 
     print('Time to setup: {:.4f}s'.format(time.time() - st))
 
-    main(train, val, save=True)
+    main(train, val, save=save)
 
     print('Training completed')
     print('Total running time: {:.4f}s'.format(time.time() - st))

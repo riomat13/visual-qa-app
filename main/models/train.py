@@ -5,66 +5,61 @@ import tensorflow as tf
 
 from main.metrics import calculate_accuracy
 
-loss_func = None
 
-
-@tf.function
-def train_cls_step(model, inputs, labels, optimizer,
-                   inputs_val=None, labels_val=None,
-                   loss='sparse_categorical_crossentropy'):
-    """Training step for simple classification.
+def make_training_cls_model(model, optimizer,
+                            loss='sparse_categorical_crossentropy'):
+    """Build training step function for classification.
 
     Args:
-        inputs: list or tuple
-            a list of tensors
-            multiple input tensors can be passed to given model
-        labels: tensor
-        optimizer: Optimizer instance
-        inputs_val: list or tuple
-            if given, evaluate validation accuracy
-            other than that, same as `inputs`
-        labels_val: tensor
-        loss: str or loss function
-            loss
+        model: tf.keras.models.Model
+            base model to train
+        optimizer: tf.keras.optimizers
+        loss: str or tf.keras.losses
     Returns:
-        loss: batch loss
-        acc: train accuracy
-        acc_val: validation accuracy
+        function:
+            run training step
     """
-    global loss_func
+    if loss == 'sparse_categorical_crossentropy':
+        loss_func = tf.keras.losses.sparse_categorical_crossentropy
+    elif loss == 'categorical_crossentropy':
+        loss_func = tf.keras.losses.categorical_crossentropy
+    elif callable(loss) and \
+            loss.__module__ == 'tensorflow.python.keras.losses':
+        loss_func = loss
+    else:
+        ValueError('Invalid loss function is given. '
+                   'Choose from `sparse_categorical_crossentropy` '
+                   'or `categorical_crossentropy`')
 
-    acc_val = None
+    @tf.function
+    def train_cls_step(inputs, labels):
+        """Training step for simple classification.
 
-    if loss_func is None:
-        if loss == 'sparse_categorical_crossentropy':
-            loss_func = tf.keras.losses.sparse_categorical_crossentropy
-        elif loss == 'categorical_crossentropy':
-            loss_func = tf.keras.losses.categorical_crossentropy
-        elif callable(loss) and \
-                loss.__module__ == 'tensorflow.python.keras.losses':
-            loss_func = loss
-        else:
-            ValueError('Invalid loss function is given. '
-                       'Choose from `sparse_categorical_crossentropy` '
-                       'or `categorical_crossentropy`')
+        Args:
+            inputs: list or tuple
+                a list of tensors
+                multiple input tensors can be passed to given model
+            labels: tensor
+        Returns:
+            loss: batch loss
+            acc: train accuracy
+        """
+        nonlocal model
+        nonlocal optimizer
+        nonlocal loss_func
 
-    with tf.GradientTape() as tape:
-        out = model(*inputs)
-        if isinstance(out, tuple):
-            out = out[0]
-        losses = loss_func(labels, out, from_logits=True)
-        loss = tf.reduce_mean(losses)
+        with tf.GradientTape() as tape:
+            out = model(*inputs)
+            if isinstance(out, tuple):
+                out = out[0]
+            cost = loss_func(labels, out, from_logits=True)
+            loss = tf.reduce_mean(cost)
 
-    trainables = model.trainable_variables
-    gradients = tape.gradient(loss, trainables)
-    optimizer.apply_gradients(zip(gradients, trainables))
+        trainables = model.trainable_variables
+        gradients = tape.gradient(loss, trainables)
+        optimizer.apply_gradients(zip(gradients, trainables))
 
-    acc = calculate_accuracy(out, labels)
+        acc = calculate_accuracy(out, labels)
 
-    if inputs_val is not None and labels_val is not None:
-        out_val = model(*inputs_val)
-        if isinstance(out_val, tuple):
-            out_val = out_val[0]
-        acc_val = calculate_accuracy(out_val, labels_val)
-
-    return loss, acc, acc_val
+        return loss, acc
+    return train_cls_step
