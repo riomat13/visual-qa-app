@@ -9,6 +9,7 @@
 #   PredictionScore: store results of predictions for later update
 
 from datetime import datetime
+from importlib.util import find_spec
 
 from sqlalchemy import (
     Column, Integer, String, Float, DateTime,
@@ -17,6 +18,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 
 from main.orm.db import Base
+from main.orm.types import ChoiceType
 from main.mixins.models import BaseMixin, ModelLogMixin
 
 
@@ -24,13 +26,20 @@ class MLModel(BaseMixin, Base):
     """Created models."""
     __tablename__ = 'ml_model'
 
-    name = Column(String(64), nullable=False)
+    name = Column(String(64), unique=True, nullable=False)
     # model type: classification, encoder/decoder etc.
-    type = Column(String(32), unique=True, nullable=False)
+    type = Column(ChoiceType(
+        {
+            'cls': 'classification',
+            'seq': 'seq2seq',
+            'enc': 'encoder',
+            'dec': 'decoder'
+        }), nullable=False)
     # type of problem to solve: question_type etc.
     category = Column(String(32), nullable=False)
-    # class path (e.g. main.models.some.Model)
+    # module path (e.g. main.models)
     module = Column(String(64), nullable=False)
+    object = Column(String(32), nullable=False)
     # path to model data (e.g. weights)
     path = Column(String(128), nullable=True)
     # created/updated data
@@ -42,6 +51,40 @@ class MLModel(BaseMixin, Base):
 
     # TODO: make relationship with scores as one-to-many
     #predictions = relationship('RequestLog', backref='ml_model')
+
+    def __init__(self, name, type, category, module, object,
+                 path=None, metrics=None, score=None):
+        if not module:
+            raise ValueError('Empty module is provided')
+        try:
+            find_spec(module)
+        except ModuleNotFoundError:
+            log.error(f'Invalid module name: {module}')
+            raise
+
+        if type not in ('cls', 'seq', 'enc', 'dec'):
+            raise ValueError('Invalid type name')
+
+        super(MLModel, self).__init__(name=name,
+                                      type=type,
+                                      category=category,
+                                      module=module,
+                                      object=object,
+                                      path=path,
+                                      metrics=metrics,
+                                      score=score)
+
+    def update_score(self, score, metrics=None):
+        """Update score data.
+
+        Args:
+            score: float
+            metrics(optional): str
+        """
+        if metrics is not None:
+            self.metrics = metrics
+        self.score = score
+        self.save()
 
 
 class PredictionModel(BaseMixin, Base):
