@@ -19,7 +19,6 @@ if __name__ == '__main__':
                             .get('port', 12345),
                         help='port number to connect')
 
-    
     args = parser.parse_args()
     host = args.host
     port = args.port

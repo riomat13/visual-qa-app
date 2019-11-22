@@ -35,6 +35,7 @@ class Config(object):
         # question type classification
         'QTYPE': {
             'path': os.path.join(ROOT_DIR, 'checkpoints', 'question_types'),
+            'seq_length': 15,
             'vocab_size': 20000,
             'embedding_dim': 256,
             'units': 64,
@@ -49,6 +50,7 @@ class Config(object):
         # what
         'WHAT': {
             'path': os.path.join(ROOT_DIR, 'checkpoints', 'what'),
+            'ans_length': 7,
             'vocab_size': 20000,
             'embedding_dim': 256,
             'units': 256,

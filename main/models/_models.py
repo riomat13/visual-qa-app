@@ -20,12 +20,15 @@ class QuestionTypeClassification(tf.keras.Model):
         self.gru = tf.keras.layers.GRU(units,
                                        return_sequences=False,
                                        recurrent_initializer='glorot_uniform')
-        self.dense = tf.keras.layers.Dense(units)
+        self.dense = tf.keras.layers.Dense(256)
         self.out_layer = tf.keras.layers.Dense(num_classes)
 
     def call(self, sequences):
+        # shape => (batch_size, seq_length, embedding_dim)
         x = self.embedding(sequences)
+        # shape => (batch_size, units)
         x = self.gru(x)
+        # shape => (batch_size, 256)
         x = self.dense(x)
 
         # output shape = (batch_size, num_classes)
@@ -36,7 +39,6 @@ class QuestionTypeClassification(tf.keras.Model):
 class ClassificationModel(tf.keras.Model):
     def __init__(self,
                  units,
-                 seq_length,
                  vocab_size,
                  embedding_dim,
                  num_classes):
@@ -194,3 +196,14 @@ class QuestionImageEncoder(tf.keras.Model):
         x = tf.concat([context_img, context_q], axis=-1)
         features = self.fc(x)
         return features, weights
+
+
+def QuestionAnswerModel(units,
+                        seq_length,
+                        ans_length,
+                        vocab_size,
+                        embedding_dim,
+                        model_type):
+    # tmp model
+    model = tf.keras.Model()
+    return model

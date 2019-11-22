@@ -8,19 +8,19 @@ from functools import partial
 import numpy as np
 
 from main.settings import Config
-from main.utils.loader import fetch_question_types
+from main.utils.loader import fetch_question_types, load_image
 from main.utils.preprocess import text_processor
 from ._base import BaseModel
 from ._models import (
     QuestionTypeClassification,
     ClassificationModel,
-    #SequenceGeneratorModel,
+    QuestionAnswerModel,
 )
 
 log = logging.getLogger(__name__)
 
 
-processor = text_processor(from_config=True)
+processor = text_processor(num_words=20000, from_config=True)
 # TODO: tmp
 classes = fetch_question_types()
 id2q = [q for q in classes]
@@ -56,7 +56,13 @@ class PredictionModel(BaseModel):
 
     def __init__(self):
         if PredictionModel.__instance is None:
-            self.build_model()
+            self._build_model()
+            self._processor = text_processor(
+                num_words=20000,
+                maxlen=Config.MODELS.get('QTYPE').get('seq_length'),
+                from_config=True
+            )
+
             PredictionModel.__instance = self
         else:
             raise RuntimeError(f'This object can not be instantiated. Use {self.__class__.__name__}.get_model() instead')
@@ -65,17 +71,19 @@ class PredictionModel(BaseModel):
     def type(self):
         return self.__type
 
-    def predict(self, x):
-        processor = text_processor(num_words=25000, from_config=True)
+    def predict(self, sentence):
         # processor handles list of sentences
-        sequence = processor(sentence)
-        # TODO: check edge cases such as all padded
-        if sequence.shape[1] > 0:
-            pred = predict_question_type(sequence)
-        else:
+        sequence = self._processor(sentence)
+
+        # if no word is detected including oov,
+        # skip prediction
+        if len(sequence.shape) == 1 or \
+                len([s for s in sequence[0] if s > 1]) == 0:
             # last id in category(none of the above)
             log.warning('not found any word from vocabulary')
-            pred = 80
+            return 'Can not understand the question'
+
+        pred = predict_question_type(sequence)
 
         if pred in self._model_class['Y/N']:
             pred = predict_yes_or_no(sequence)
@@ -83,26 +91,30 @@ class PredictionModel(BaseModel):
             pred = predict_what(sequence)
         return pred
 
-    def get_model(self):
+    @classmethod
+    def get_model(cls):
         if PredictionModel.__instance is None:
             PredictionModel()
         return PredictionModel.__instance
 
     def _build_model(self):
-        # count class types from file
-        num_classes = num_classes
         self._models = {
             'QTYPE': _get_q_type_model(),
-            #'Y/N': _get_y_n_model(),
+            'Y/N': _get_y_n_model(),
+            'WHAT': _get_what_model(),
         }
 
 
 def _set_weights_by_config(type, model):
-    path = Config.MODELS.get(type)
+    model_type = Config.MODELS.get(type)
+    if model_type is None:
+        raise ValueError('Model type is not registered')
+    path = model_type.get('path')
     if not path or not os.path.isdir(path):
         raise FileNotFoundError('Could not find weights. Path is not set or Model is not implemented yet')
 
     model.load_weights(os.path.join(path, 'weights'))
+    log.info('Loaded weights: {}'.format(type))
 
 
 def _get_q_type_model():
@@ -113,11 +125,12 @@ def _get_q_type_model():
         nonlocal model
 
         if model is None:
+            cfg = Config.MODELS['QTYPE']
             # TODO: remove hard coded parameters
             model = QuestionTypeClassification(
-                embedding_dim=256,
-                units=64,
-                vocab_size=Config.MODELS['TOKENIZER'].get('vocab_size'),
+                embedding_dim=cfg.get('embedding_dim'),
+                units=cfg.get('units'),
+                vocab_size=cfg.get('vocab_size'),
                 num_classes=num_classes,
             )
             _set_weights_by_config('QTYPE', model)
@@ -135,11 +148,38 @@ def _get_y_n_model():
         nonlocal model
 
         if model is None:
-            model = ClassificationModel(256,
-                                        Config.MODELS['TOKENIZER'].get('vocab_size'),
-                                        embedding_dim=256,
-                                        num_classes=3)
+            cfg = Config.MODELS['Y/N']
+
+            model = ClassificationModel(
+                units=cfg.get('units'),
+                vocab_size=cfg.get('vocab_size'),
+                embedding_dim=cfg.get('embedding_dim'),
+                num_classes=3,
+            )
             _set_weights_by_config('Y/N', model)
+
+        return model
+
+    return build_model()
+
+
+def _get_what_model():
+    """Predict to answer to `what` questions."""
+    model = None
+
+    def build_model():
+        nonlocal model
+
+        if model is None:
+            cfg = Config.MODELS['WHAT']
+            model = QuestionAnswerModel(
+                units=cfg.get('units'),
+                seq_length=15,
+                ans_length=7,
+                vocab_size=cfg.get('vocab_size'),
+                embedding_dim=cfg.get('embedding_dim'),
+                model_type='WHAT')
+            _set_weights_by_config('WHAT', model)
 
         return model
 
@@ -196,3 +236,13 @@ def predict_question_type(sequence):
     pred = np.argmax(pred, axis=1)
     pred = int(pred[0])
     return id2q[pred]
+
+
+def predict_yes_or_no(sequence, img_path):
+    model = _get_y_n_model()
+    img = load_image(img_path)
+
+    # predicted result shape is (1, 3)
+    pred = model(sequence, img)
+    pred = np.argmax(pred, axis=-1)
+    return pred

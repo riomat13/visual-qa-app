@@ -2,9 +2,11 @@
 # -*- coding: utf-8 -*-
 
 import os
+import logging
 
-# ignore tensorflow debug info
+# ignore tensorflow debug info and logs
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+logging.disable(logging.CRITICAL)
 
 import unittest
 from unittest.mock import patch, Mock
@@ -19,9 +21,57 @@ from main.models.infer import (
     _get_y_n_model,
     awake_models,
     predict_question_type,
+    predict_yes_or_no,
     PredictionModel,
     convert_output_to_sentence,
 )
+
+
+class PredictionModelTest(unittest.TestCase):
+
+    @patch('main.models.infer._set_weights_by_config')
+    def test_get_model_instance(self, mock_setter):
+        model = PredictionModel()
+        with self.assertRaises(RuntimeError):
+            model2 = PredictionModel()
+
+        model2 = PredictionModel.get_model()
+
+        self.assertTrue(model is model2)
+
+    def test_handle_not_understandable_question(self):
+        target = 'Can not understand the question'
+        model = PredictionModel.get_model()
+
+        test_sents = [
+            '',
+            '? ? ? *&^@#',
+            ';saldfnjvafdlgj',
+            'dso njmgf aju'
+        ]
+
+        for sent in test_sents:
+            res = model.predict(sent)
+            self.assertEqual(res, target)
+
+    @patch('main.models.infer.predict_yes_or_no')
+    @patch('main.models.infer.predict_question_type')
+    def test_run_prediction_from_yes_or_no(self,
+                                           mock_qtype,
+                                           mock_y_n):
+        model = PredictionModel.get_model()
+        model._processor = Mock()
+        sequence = np.array([[1, 2, 3]])
+        model._processor.return_value = sequence
+        # this will be considered as yes/no type
+        mock_qtype.return_value = 2
+        target = 'test'
+        mock_y_n.return_value = target
+
+        res = model.predict('test')
+        mock_qtype.assert_called_once_with(sequence)
+        mock_y_n.assert_called_once_with(sequence)
+        self.assertEqual(res, target)
 
 
 class PredictQuestionTypeTest(unittest.TestCase):
@@ -38,12 +88,22 @@ class PredictQuestionTypeTest(unittest.TestCase):
         # result is score of softmax with 81 classes
         self.assertEqual(pred.shape, (1, num_classes))
 
+    def test_predict_by_function(self):
+        from main.models.infer import classes
+
+        seq = np.random.randint(1, 100, (1, 10))
+        pred = predict_question_type(seq)
+        self.assertTrue(pred in classes)
+
 
 class PredictYesNoTest(unittest.TestCase):
 
-    @unittest.skip
-    def test_model_is_not_implemented(self):
-        model = _get_y_n_model()
+    @patch('main.models.infer.load_image')
+    def test_run_prediction_and_check_shape(self, mock_loader):
+        mock_loader.return_value = \
+            np.random.randint(0, 255, (224, 224, 3))
+        pred = predict_yes_or_no('this is test', '')
+        self.assertEqual(pred.shape, (1,))
 
 
 class SetUpModelsTest(unittest.TestCase):
@@ -59,6 +119,16 @@ class SetUpModelsTest(unittest.TestCase):
 
 
 class ConvertResultTest(unittest.TestCase):
+
+    def test_handle_invalid_inputs(self):
+        test_cases = [
+            np.zeros((10,)),
+            np.zeros((10, 5, 3))
+        ]
+
+        for case in test_cases:
+            with self.assertRaises(ValueError):
+                convert_output_to_sentence(case)
 
     @patch('main.models.infer.processor.index_word')
     def test_convert_output_to_seq(self, mock_processor):
