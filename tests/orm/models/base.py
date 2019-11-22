@@ -15,22 +15,6 @@ session = None
 
 class _Base(unittest.TestCase):
 
-    @classmethod
-    def setUpClass(cls):
-        global session
-        global Session
-
-        Session = session_builder()
-        session = Session()
-
-    @classmethod
-    def tearDownClass(cls):
-        global Session
-
-        session.close()
-        Session.remove()
-        Session = None
-
     def setUp(self):
         app = create_app('test')
         app_context = app.app_context()
@@ -42,9 +26,6 @@ class _Base(unittest.TestCase):
         self.engine = engine
         Base.metadata.create_all(engine)
 
-        self.session = session
-
     def tearDown(self):
-        self.session.rollback()
         self.app_context.pop()
         Base.metadata.drop_all(self.engine)

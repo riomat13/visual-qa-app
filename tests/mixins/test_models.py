@@ -42,9 +42,10 @@ class BaseMixinTest(_Base):
         init_size = MLModel.query().count()
 
         m = MLModel(name='test',
-                    type='test',
+                    type='cls',
                     category='test',
-                    module='tests.mixins.models')
+                    module='main.mixins.models',
+                    object='TestCase')
 
         # save model and added new one
         m.save()
