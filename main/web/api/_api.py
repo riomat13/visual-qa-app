@@ -7,7 +7,7 @@ import asyncio
 from flask import request, jsonify, session
 
 from . import api
-from main.orm.models.ml import MLModel, RequestLog
+from main.orm.models.ml import MLModel, RequestLog, PredictionScore
 from main.models.client import run_model
 
 log = logging.getLogger(__name__)
@@ -70,23 +70,49 @@ def get_model_info(model_id):
     return response
 
 
-@api.route('/question_type', methods=['POST'])
+@api.route('/predict/question_type', methods=['POST'])
 def predict_question_type():
     """Predict question type by given question."""
     question = request.values.get('question')
     # empty path is trigger to execute only question type prediction
     pred = asyncio.run(run_model('', question))
-
-    response = jsonify({'question': question, 'answer': pred})
+    if pred == '<e>':
+        response = jsonify({'question': question, 'error': 'error occured'})
+    else:
+        response = jsonify({'question': question, 'answer': pred})
     response.status_code = 200
     return response
 
 
-# TODO: add POST to filter by question type
-@api.route('/question_type/logs')
-def question_type_logs():
-    logs = RequestLog.query().all()
-    response = jsonify([log.to_dict() for log in logs])
+@api.route('/logs/requests', methods=['GET', 'POST'])
+def extract_requests_logs():
+    logs = RequestLog.query()
+
+    if request.method == 'POST':
+        q_type = request.values.get('question_type')
+        logs = logs.filter_by(question_type=q_type)
+
+    response = jsonify([log.to_dict() for log in logs.all()])
+    response.status_code = 200
+    return response
+
+
+@api.route('/logs/predictions', methods=['GET', 'POST'])
+def extract_prediction_logs():
+    scores = PredictionScore.query()
+
+    if request.method == 'POST':
+        q_type = request.values.get('question_type')
+        scores = scores.filter(PredictionScore.log.has(question_type=q_type))
+    response = jsonify([
+        {
+            'rate': log.rate,
+            'prediction': log.prediction,
+            'probability': log.probability,
+            'answer': log.answer,
+            'predicted_time': log.predicted_time,
+            'log_id': log.log_id
+        } for log in scores.all()])
     response.status_code = 200
     return response
 
