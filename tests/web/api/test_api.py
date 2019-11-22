@@ -9,7 +9,7 @@ set_config('test')
 
 from main.web.app import create_app
 from main.orm.db import Base, engine
-from main.orm.models.ml import RequestLog
+from main.orm.models.ml import RequestLog, MLModel
 
 
 class _Base(unittest.TestCase):
@@ -43,7 +43,7 @@ class ModelListTest(_Base):
         mock_query.all.return_value = [mock_model for _ in range(data_size)]
         mock_model.query.return_value = mock_query
 
-        response = self.client.get('/api/model_list')
+        response = self.client.get('/api/models/all')
         
         self.assertEqual(response.status_code, 200)
 
@@ -53,6 +53,32 @@ class ModelListTest(_Base):
         
         for data in json_data:
             self.assertEqual(data, target)
+
+    def test_register_model(self):
+        model_name = 'test_model'
+        res = self.client.post(
+            '/api/register/model',
+            data=dict(name=model_name,
+                      type='cls',
+                      category='test',
+                      module='tests.web.api',
+                      object='TestCase')
+        )
+        data = MLModel.query().filter_by(name=model_name).first()
+        self.assertTrue(data)
+
+    def test_extract_model_info_by_id(self):
+        model_name = 'test'
+        model = MLModel(name=model_name,
+                        type='cls',
+                        category='test',
+                        module='tests.web.api',
+                        object='TestCase')
+        model.save()
+
+        data = MLModel.query().filter_by(name=model_name).first()
+        res = self.client.get(f'/api/model/{data.id}')
+        self.assertEqual(res.json.get('name'), model_name)
 
 
 class QuestionTypeTest(_Base):
@@ -87,7 +113,10 @@ class QuestionTypeLogsTest(_Base):
         model.to_dict.return_value = {'key': 'test'}
         size = 4
 
-        mock_query.return_value = [model] * size
+        mock_all = Mock()
+        mock_all.return_value = [model] * size
+
+        mock_query.return_value.all = mock_all
 
         # TODO: filter by question type
         response = self.client.get('/api/question_type/logs')

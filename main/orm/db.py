@@ -93,4 +93,4 @@ def init_db():
 def reset_db(conn=None):
     conn = conn or engine
     Base.metadata.drop_all(conn)
-    initdb()
+    init_db()
