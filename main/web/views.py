@@ -10,12 +10,40 @@ from werkzeug import secure_filename
 from . import base
 from main.settings import Config
 from main.web.forms import QuestionForm
+from main.web.auth import verify_user
 from main.models.client import run_model
 
 
 @base.route('/')
 def index():
     return render_template('index.html')
+
+
+@base.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        email = request.form['email']
+        password = request.form['password']
+
+        user = verify_user(username, password, email=email)
+        if user is None:
+            # if not valid user
+            flash('Provided information is incorrect')
+            return redirect(url_for('base.login'))
+
+        # set user to session after clear all hold information
+        session.clear()
+        session['user_id'] = user.id
+        return redirect(url_for('base.index'))
+
+    return render_template('login.html')
+
+
+@base.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('base.index'))
 
 
 @base.route('/prediction', methods=['GET', 'POST'])

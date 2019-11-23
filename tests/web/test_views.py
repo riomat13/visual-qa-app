@@ -4,9 +4,14 @@
 import unittest
 from unittest.mock import patch
 
+from main.settings import set_config
+set_config('test')
+
 import io
 
 from main.web.app import create_app
+from main.orm.db import Base
+from main.orm.models.base import User
 
 
 class GeneralBaseViewResponseTest(unittest.TestCase):
@@ -16,8 +21,12 @@ class GeneralBaseViewResponseTest(unittest.TestCase):
         self.app_context.push()
 
         self.client = self.app.test_client()
+        from main.orm.db import engine
+        self.engine = engine
+        Base.metadata.create_all(engine)
 
     def tearDown(self):
+        Base.metadata.drop_all(self.engine)
         self.app_context.pop()
 
     def test_index_view(self):
@@ -27,6 +36,36 @@ class GeneralBaseViewResponseTest(unittest.TestCase):
     def test_prediction_view(self):
         response = self.client.get('/prediction')
         self.assertEqual(response.status_code, 200)
+
+    def test_log_in_and_out(self):
+        uname = 'test'
+        email = 'test@example.com'
+        password = 'pwd'
+
+        user = User(username=uname,
+                    email=email,
+                    password=password)
+        user.save()
+
+        res = self.client.post(
+            '/login',
+            data=dict(username='test',
+                      email='invalid@example.com',
+                      password='pwd')
+        )
+        # if incorrect, redirect to login page again
+        self.assertEqual(res.status_code, 302)
+        self.assertTrue(res.location.endswith('login'))
+
+        res = self.client.post(
+            '/login',
+            data=dict(username=uname,
+                      email=email,
+                      password=password)
+        )
+        self.assertEqual(res.status_code, 302)
+        # has to be jump to the index page
+        self.assertEqual(res.location, 'http://localhost/')
 
 
 class PredictionTest(unittest.TestCase):
