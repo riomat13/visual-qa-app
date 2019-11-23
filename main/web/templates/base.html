@@ -6,8 +6,8 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}" />
     {% block links %}{% endblock links %}
-    <title>{% block title %}{% endblock title %}</title>
   </head>
+  <title>Visual Question Answering App{% block title %}{% endblock title %}</title>
   <body>
     <div class="navbar">
         <ul>
@@ -19,5 +19,6 @@
       {% block content %}{% endblock content %}
       {% block scripts %}{% endblock scripts %}
     </div>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
   </body>
 </html>

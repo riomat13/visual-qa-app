@@ -6,8 +6,8 @@
 <div class="prediction-form">
   {% for message in get_flashed_messages() %}
   <div class="alert alert-warning">
-  <button class="close">&times;</button>
   {{ message }}
+  <span class="close">&times;</sapn>
   </div>
   {% endfor %}
   <form method="POST" enctype="multipart/form-data">

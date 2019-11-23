@@ -58,6 +58,7 @@ input[type=text] {
 }
 
 .container {
+    box-sizing: border-box;
     margin: 0;
     padding: 16px;
     height: 100%;
@@ -104,4 +105,29 @@ input[type=text] {
 .btn-success {
     background-color: #4CAF50;
     color: #fff;
+}
+
+.close {
+    float: right;
+}
+
+.close:hover {
+    cursor: pointer;
+}
+
+.alert {
+    width: 400px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+    border-radius: 4px;
+}
+
+.alert-warning {
+    background-color: rgba(217,83,79, 0.4);
+    color: #d9534f;
+    border: 1px solid rgba(217, 83, 79, 0.5);
+}
+
+.alert-warning>.close:hover {
+    color: #b2b2b2;
 }
