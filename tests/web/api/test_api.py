@@ -11,30 +11,49 @@ set_config('test')
 
 from main.web.app import create_app
 from main.orm.db import Base, engine
+from main.orm.models.base import User
 from main.orm.models.ml import RequestLog, MLModel, PredictionScore
 
 
 class _Base(unittest.TestCase):
 
-    def setUp(self):
-        self.app = create_app('test')
-        self.app_context = self.app.app_context()
-        self.app_context.push()
-        self.client = self.app.test_client()
+    @classmethod
+    def setUpClass(cls):
+        app = create_app('test')
+        cls.app_context = app.app_context()
+        cls.app_context.push()
+        cls.client = app.test_client()
 
         from main.orm.db import engine
-        self.engine = engine
+        cls.engine = engine
         Base.metadata.create_all(engine)
 
+        user = User(username='test',
+                    email='test@example.com',
+                    password='pwd')
+        user.save()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.app_context.pop()
+        Base.metadata.drop_all(cls.engine)
+
+    def login(self):
+        self.client.post('/login',
+                         data=dict(username='test',
+                                   email='test@example.com',
+                                   password='pwd'))
+
     def tearDown(self):
-        self.app_context.pop()
-        Base.metadata.drop_all(self.engine)
+        # in case if logged in
+        self.client.get('/logout')
 
 
 class ModelListTest(_Base):
 
     @patch('main.web.api._api.MLModel')
     def test_extracting_model_list(self, mock_model):
+        self.login()
         data_size = 4
         target = [
             {k: v for k, v in zip('test', range(4))}
@@ -57,6 +76,7 @@ class ModelListTest(_Base):
             self.assertEqual(data, target)
 
     def test_register_model(self):
+        self.login()
         model_name = 'test_model'
         res = self.client.post(
             '/api/register/model',
@@ -69,7 +89,9 @@ class ModelListTest(_Base):
         data = MLModel.query().filter_by(name=model_name).first()
         self.assertTrue(data)
 
-    def test_register_model_handle_invalid_input(self):
+    @patch('main.web.api._api.login_required')
+    def test_register_model_handle_invalid_input(self, mock_login):
+        self.login()
         res = self.client.post(
             '/api/register/model',
             data=dict(name='test',
@@ -95,6 +117,7 @@ class ModelListTest(_Base):
         self.assertTrue('error' in res.json)
 
     def test_extract_model_info_by_id(self):
+        self.login()
         model_name = 'test'
         model = MLModel(name=model_name,
                         type='cls',
@@ -157,6 +180,7 @@ class ExtractRequestLogsTest(_Base):
 
     @patch('main.web.api._api.RequestLog.query')
     def test_extract_all_logs(self, mock_query):
+        self.login()
         model = Mock(RequestLog())
         model.to_dict.return_value = {'key': 'test'}
         size = 4
@@ -178,6 +202,7 @@ class ExtractRequestLogsTest(_Base):
 
     @patch('main.web.api._api.RequestLog.query')
     def test_extract_question_type_logs(self, mock_query):
+        self.login()
         model = Mock(RequestLog)
         model.to_dict.return_value = {'key': 'value'}
         size = 4
@@ -203,6 +228,7 @@ class ExtractRequestLogsTest(_Base):
         mock_filter.assert_called_once_with(question_type='test')
 
     def test_extract_non_registered_logs(self):
+        self.login()
         res = self.client.post('/api/logs/requests',
                                data=dict(question_type='test'))
         self.assertEqual(res.status_code, 200)
@@ -218,6 +244,7 @@ class ExtractPredictionScoreLogsTest(_Base):
 
     @patch('main.web.api._api.PredictionScore.query')
     def test_extract_all_scores(self, mock_query):
+        self.login()
         size = 4
 
         Log = namedtuple(
@@ -247,6 +274,7 @@ class ExtractPredictionScoreLogsTest(_Base):
             self.assertEqual(log.get('prediction'), 'test')
 
     def test_extract_scores_by_question_type(self):
+        self.login()
         size = 4
         target_size = 2
 

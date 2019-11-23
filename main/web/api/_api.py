@@ -9,11 +9,13 @@ from flask import request, jsonify, session
 from . import api
 from main.orm.models.ml import MLModel, RequestLog, PredictionScore
 from main.models.client import run_model
+from main.web.auth import login_required
 
 log = logging.getLogger(__name__)
 
 
 @api.route('/models/all')
+@login_required
 def model_list():
     """Return model list availabel."""
     models = MLModel.query().all()
@@ -23,6 +25,7 @@ def model_list():
 
 
 @api.route('/register/model', methods=['POST'])
+@login_required
 def register_model():
     name = request.values.get('name')
     type_ = request.values.get('type')
@@ -59,6 +62,7 @@ def register_model():
 
 
 @api.route('/model/<int:model_id>')
+@login_required
 def get_model_info(model_id):
     model = MLModel.query().filter_by(id=model_id).first()
     if model is None:
@@ -85,6 +89,7 @@ def predict_question_type():
 
 
 @api.route('/logs/requests', methods=['GET', 'POST'])
+@login_required
 def extract_requests_logs():
     logs = RequestLog.query()
 
@@ -98,6 +103,7 @@ def extract_requests_logs():
 
 
 @api.route('/logs/predictions', methods=['GET', 'POST'])
+@login_required
 def extract_prediction_logs():
     scores = PredictionScore.query()
 
