@@ -23,8 +23,11 @@ def create_app(mode='local'):
 
     engine = app.config['DATABASE_URI']
 
-    from main.orm.db import session_builder
+    from main.orm.db import session_builder, init_db
     session_builder()
+
+    with app.app_context():
+        init_db()
 
     @app.teardown_appcontext
     def shutdown_session(exception=None):

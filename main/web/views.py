@@ -82,6 +82,10 @@ def prediction():
 
             # save image data for later investigation
             f.save(os.path.join(Config.UPLOAD_DIR, '{filename}'))
+    else:
+        # clear when re-enter the page
+        if 'image' in session:
+            session.pop('image')
 
     return render_template('prediction.html',
                            filename=filename,
