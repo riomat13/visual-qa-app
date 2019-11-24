@@ -84,7 +84,7 @@ def prediction():
             session['image'] = filename
 
             # save image data for later investigation
-            f.save(os.path.join(Config.UPLOAD_DIR, '{filename}'))
+            f.save(os.path.join(Config.UPLOAD_DIR, f'{filename}'))
     else:
         # clear when re-enter the page
         if 'image' in session:
