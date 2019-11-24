@@ -2,32 +2,54 @@
 # -*- coding: utf-8 -*-
 
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, Mock
+
+import io
+
+from flask import g
 
 from main.settings import set_config
 set_config('test')
 
-import io
-
 from main.web.app import create_app
 from main.orm.db import Base
 from main.orm.models.base import User
+from main.orm.models.web import Note, Citation
 
 
-class GeneralBaseViewResponseTest(unittest.TestCase):
-    def setUp(self):
-        self.app = create_app('test')
-        self.app_context = self.app.app_context()
-        self.app_context.push()
+admin = {
+    'username': 'test',
+    'email': 'test@example.com',
+    'password': 'pwd',
+}
 
-        self.client = self.app.test_client()
+
+class _Base(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        app = create_app('test')
+        cls.app_context = app.app_context()
+        cls.app_context.push()
+
+        cls.client = app.test_client()
         from main.orm.db import engine
-        self.engine = engine
-        Base.metadata.create_all(engine)
+        cls.engine = engine
+        Base.metadata.create_all(cls.engine)
 
-    def tearDown(self):
-        Base.metadata.drop_all(self.engine)
-        self.app_context.pop()
+        # set up user for authentication
+        user = User(username=admin['username'],
+                    email=admin['email'],
+                    password=admin['password'])
+        user.save()
+
+    @classmethod
+    def tearDownClass(cls):
+        Base.metadata.drop_all(cls.engine)
+        cls.app_context.pop()
+
+
+class GeneralBaseViewResponseTest(_Base):
 
     def test_index_view(self):
         response = self.client.get('/')
@@ -38,15 +60,6 @@ class GeneralBaseViewResponseTest(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_log_in_and_out(self):
-        uname = 'test'
-        email = 'test@example.com'
-        password = 'pwd'
-
-        user = User(username=uname,
-                    email=email,
-                    password=password)
-        user.save()
-
         res = self.client.post(
             '/login',
             data=dict(username='test',
@@ -59,24 +72,22 @@ class GeneralBaseViewResponseTest(unittest.TestCase):
 
         res = self.client.post(
             '/login',
-            data=dict(username=uname,
-                      email=email,
-                      password=password)
+            data=dict(username=admin['username'],
+                      email=admin['email'],
+                      password=admin['password'])
         )
         self.assertEqual(res.status_code, 302)
         # has to be jump to the index page
         self.assertEqual(res.location, 'http://localhost/')
 
+        self.assertEqual(g.user.username, admin['username'])
 
-class PredictionTest(unittest.TestCase):
-    def setUp(self):
-        self.app = create_app('test')
-        self.app_context = self.app.app_context()
-        self.app_context.push()
-        self.client = self.app.test_client()
+        res = self.client.get('/logout')
+        # user information is removed
+        self.assertIsNone(g.get('user'))
 
-    def tearDown(self):
-        self.app_context.pop()
+
+class PredictionTest(_Base):
 
     def test_upload_image(self):
         # store image data into buffer temporarily
@@ -124,3 +135,28 @@ class PredictionTest(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn(test_sent, response.data.decode())
+
+
+class NoteViewTest(_Base):
+
+    @patch('main.web.views.Note.query')
+    @patch('main.web.views.Citation.query')
+    def test_note_view(self, mock_cits, mock_notes):
+        mock_note = mock_notes.return_value
+        mock_ref = mock_cits.return_value
+
+        mock_notes.return_value.all.return_value = [mock_note]
+        mock_cits.return_value.all.return_value = [mock_ref]
+
+        mock_note.to_dict.return_value = 'test_notes'
+        mock_ref.to_dict.return_value = 'test_refs'
+
+        response = self.client.get('/note')
+        self.assertEqual(response.status_code, 200)
+
+        self.assertIn(b'test_notes', response.data)
+        self.assertIn(b'test_refs', response.data)
+
+
+if __name__ == '__main__':
+    unittest.main()

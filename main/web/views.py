@@ -10,8 +10,9 @@ from werkzeug import secure_filename
 from . import base
 from main.settings import Config
 from main.web.forms import QuestionForm
-from main.web.auth import verify_user
+from main.web.auth import verify_user, login_required
 from main.models.client import run_model
+from main.orm.models.web import Note, Citation
 
 
 @base.route('/')
@@ -95,3 +96,13 @@ def prediction():
                            question=question,
                            prediction=pred,
                            form=form)
+
+
+@base.route('/note')
+def note():
+    updates = [note.to_dict() for note in Note.query().all()]
+    references = [ref.to_dict() for ref in Citation.query().all()]
+
+    return render_template('note.html',
+                           updates=updates,
+                           references=references)

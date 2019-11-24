@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% set active = 'note' %}
+{% block title %} - note{% endblock title %}
+{% block content %}
+<h2>Note</h2>
+<p>This page shows update history and references.</p>
+{% if updates %}
+<h3>Update:</h3>
+<li>
+{% for line in updates %}
+<ul>{{ line }}</ul>
+{% endfor %}
+</li>
+{% endif %}
+{% if references %}
+<h3>Reference:</h3>
+<li>
+{% for line in references %}
+<ul>{{ line }}</ul>
+{% endfor %}
+</li>
+{% endif %}
+{% endblock content %}

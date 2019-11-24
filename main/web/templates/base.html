@@ -13,6 +13,7 @@
         <ul>
             <li><a class="{% if active == 'home' %}active{% endif %}" href="{{ url_for('base.index') }}">Home</a></li>
             <li><a class="{% if active == 'prediction' %}active{% endif %}" href="{{ url_for('base.prediction') }}">Prediction</a></li>
+            <li><a class="{% if active == 'note' %}active{% endif %}" href="{{ url_for('base.note') }}">Note</a></li>
         </ul>
     </div>
     <div class="container">
