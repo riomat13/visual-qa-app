@@ -58,15 +58,15 @@ class _BaseWeb(unittest.TestCase):
 class UserVerificationTest(_BaseWeb):
 
     def test_user_is_registered(self):
-        self.assertIsNone(
+        self.assertFalse(
             verify_user('invalid', 'invalid', 'invalid')
         )
 
-        user = verify_user(username='test',
-                           email='test@example.com',
-                           password='pwd')
-        self.assertIsNotNone(user)
-        self.assertEqual(user.username, 'test')
+        self.assertTrue(
+            verify_user(username='test',
+                        email='test@example.com',
+                        password='pwd')
+        )
 
     def test_set_user_after_login(self):
         self.login()
@@ -79,7 +79,7 @@ class UserVerificationTest(_BaseWeb):
         self.assertIsNone(user)
 
     def test_verify_without_email(self):
-        user = verify_user(username='test',
-                          password='pwd')
-        self.assertIsNotNone(user)
-        self.assertEqual(user.username, 'test')
+        self.assertTrue(
+            verify_user(username='test',
+                        password='pwd')
+        )

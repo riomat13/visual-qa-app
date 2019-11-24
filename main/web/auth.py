@@ -10,7 +10,7 @@ from main.orm.models.base import User
 
 
 def verify_user(username, password, email=None):
-    """Verify password is correct by username and password."""
+    """Check if verify password is correct by username and password."""
     user = User.query() \
         .filter_by(username=username)
 
@@ -20,9 +20,11 @@ def verify_user(username, password, email=None):
     user = user.first()
 
     if user is None or not user.verify_password(password):
-        return None
+        return False
 
-    return user
+    g.user = user
+
+    return True
 
 
 def login_required(view):

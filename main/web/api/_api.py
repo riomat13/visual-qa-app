@@ -4,20 +4,23 @@
 import logging
 import asyncio
 
-from flask import request, jsonify, session
+from flask import abort, jsonify, request, session
 
 from . import api
 from main.orm.models.ml import MLModel, RequestLog, PredictionScore
 from main.models.client import run_model
-from main.web.auth import login_required
+from main.web.auth import verify_user
 
 log = logging.getLogger(__name__)
 
 
 @api.route('/models/all')
-@login_required
 def model_list():
     """Return model list availabel."""
+    authorization = request.authorization
+    if authorization is None or not verify_user(**authorization):
+        abort(403)
+
     models = MLModel.query().all()
     response = jsonify([model.to_dict() for model in models])
     response.status_code = 200
@@ -25,8 +28,11 @@ def model_list():
 
 
 @api.route('/register/model', methods=['POST'])
-@login_required
 def register_model():
+    authorization = request.authorization
+    if authorization is None or not verify_user(**authorization):
+        abort(403)
+
     name = request.values.get('name')
     type_ = request.values.get('type')
     cat = request.values.get('category')
@@ -62,8 +68,11 @@ def register_model():
 
 
 @api.route('/model/<int:model_id>')
-@login_required
 def get_model_info(model_id):
+    authorization = request.authorization
+    if authorization is None or not verify_user(**authorization):
+        abort(403)
+
     model = MLModel.query().filter_by(id=model_id).first()
     if model is None:
         data = {}
@@ -89,8 +98,11 @@ def predict_question_type():
 
 
 @api.route('/logs/requests', methods=['GET', 'POST'])
-@login_required
 def extract_requests_logs():
+    authorization = request.authorization
+    if authorization is None or not verify_user(**authorization):
+        abort(403)
+
     logs = RequestLog.query()
 
     if request.method == 'POST':
@@ -103,8 +115,11 @@ def extract_requests_logs():
 
 
 @api.route('/logs/predictions', methods=['GET', 'POST'])
-@login_required
 def extract_prediction_logs():
+    authorization = request.authorization
+    if authorization is None or not verify_user(**authorization):
+        abort(403)
+
     scores = PredictionScore.query()
 
     if request.method == 'POST':
@@ -128,6 +143,14 @@ def bad_request(e):
     log.error(e)
     response = jsonify(error=str(e))
     response.status_code = 400
+    return response
+
+
+@api.app_errorhandler(403)
+def forbidden(e):
+    log.error(e)
+    response = jsonify(error='403 Forbidden')
+    response.status_code = 403
     return response
 
 

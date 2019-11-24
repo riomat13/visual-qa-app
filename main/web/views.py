@@ -4,7 +4,7 @@
 import os.path
 import asyncio
 
-from flask import request, render_template, redirect, url_for, session, flash
+from flask import g, request, render_template, redirect, url_for, session, flash
 from werkzeug import secure_filename
 
 from . import base
@@ -26,11 +26,12 @@ def login():
         email = request.form['email']
         password = request.form['password']
 
-        user = verify_user(username, password, email=email)
-        if user is None:
+        if not verify_user(username, password, email=email):
             # if not valid user
             flash('Provided information is incorrect')
             return redirect(url_for('base.login'))
+
+        user = g.user
 
         # set user to session after clear all hold information
         session.clear()
@@ -42,6 +43,8 @@ def login():
 
 @base.route('/logout')
 def logout():
+    if 'user' in g:
+        g.pop('user')
     session.clear()
     return redirect(url_for('base.index'))
 

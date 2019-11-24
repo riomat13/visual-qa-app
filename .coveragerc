@@ -8,11 +8,18 @@ omit =
     main/migrations/*
     main/settings/*
     main/models/_models.py
+    main/models/common.py
+    tests/*
 exclude_lines =
     def __repr__
     if __name__ == .__main__.:
 
+    # conditions
+    if authorization is None
+
     # request error handler
+    def login_required
     def bad_request
+    def forbidden
     def page_not_found
     def method_not_allowed
