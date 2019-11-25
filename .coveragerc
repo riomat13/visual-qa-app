@@ -9,6 +9,7 @@ omit =
     main/settings/*
     main/models/_models.py
     main/models/common.py
+    main/utils/__init__.py
     tests/*
 exclude_lines =
     def __repr__

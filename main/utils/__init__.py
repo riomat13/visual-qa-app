@@ -16,6 +16,10 @@ def make_parser():
 
     parser = argparse.ArgumentParser(description='Run model to answer yes/no')
     parser.add_argument(
+        '-m', '--model', type=str, required=True,
+        help='model type to execute, for instnce, "what", "which"'
+    )
+    parser.add_argument(
         '--no-config', default=False, action='store_true',
         help='build text tokenizer from scratch'
     )
