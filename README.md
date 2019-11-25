@@ -10,16 +10,42 @@ This model and app is running with these libraries in following versions.
 See more detail in `requirements.txt`.
 
 ```python
-python==3.7
+python==3.7.5
 
 flask==1.1.1
 Flask-WTF==0.14.2
 Keras-Applications==1.0.8
 Keras-Preprocessing==1.1.0
+matplotlib==3.1.2
 numpy==1.17.3
 Pillow==6.2.1
 SQLAlchemy==1.3.10
 tensorflow==2.0
+
+# for training with Jetson TX2
+python==3.6.8
+tensorflow-gpu==1.14.0+nv19.9
+```
+
+### Database settings (Local)
+To make tasks simple, used `postgresql` on `docker`.
+Following is the simple steps to set up.
+```bash
+# create postgresql container
+user@user-pc$ docker run -ti --name some-name -p 5432:5432 -e POSTGRES_PASSWORD=any-password -d postgres
+
+# login to container
+docker exec -ti some-name bash
+root@5f...:/# psql -U postgres
+
+# manually set up database
+postgres=# CREATE DATABASE db_name;
+postgres=# \q
+
+root@5f...:/# exit;
+
+# login to postgres in container from local machine
+user@user-pc$ psql -h container-host -p 5432 -U postgres
 ```
 
 ## 1st week - define the problem
@@ -99,13 +125,45 @@ As I mentioned, it is hard to get good result, therefore it took so much time to
 ## 3rd week - deploy with simple structure
 Developing simple web UI to upload an image and ask a question. I have used `flask` for it, and it can serve the result (for now(11/14), it can only return question type, because closed question model is still running in training).
 
-Additionally, one of the most frequent question type is *'what is/are ...'* so that started to build models. The base structure is quite similar to closed question model. The only difference is that in decoding step, *seq-to-seq* like model so that the previous word is passed and predict the next word (initial word is '<BOS>' to ).
+Additionally, one of the most frequent question type is *'what is/are ...'*
+so that started to build models.
+The base structure is quite similar to closed question model.
+The only difference is that in decoding step, *seq-to-seq* like model
+so that the previous word is passed and predict the next word
+(initial word is '\<BOS\>' to trigger the sequence generation and '\<EOS\>' is the end of sentence).
 
-## 4th week - scaling
-Scaling and deploy.
+## 4th week
+Built model for yes/no answering, what, and why, so that it can run these predictions.
+Otherwise, it returns 'Could not answer the question'.
 
-## Additional weeks
+Since it takes so long time to train models, added some particular models in this time and will add other models later.
+In order to deploy model with simple and easy way, `heroku` is used this time.
+The branch name is `heroku` and `Procfile` is added to this branch.
+This only has two simple servers, which are `web` to run flask app and
+`workers` to process images to avoid consuming memory space, which are not included this repository since it is `heroku` specific.
+
+Unfortunately, I spent a lot of time to build and test models,
+so that I could not set up more scalable app using *MySQL* or *PostgreSQL* for database,
+and *SQLite* is used instead which has many limitation but as small app it works fine.
+This will be an additional task after 4 weeks.
+
+Currently it runs on `https://visual-qa.herokuapp.com/` with simple interface.
+However it uses free acount, so that it works as *synchronous* processing,
+thus, it may take a while to get prediction result.
+
+## Future works
 Add more features such as rich UI or additional pages in web pages. What done in this project will be the baseline, and try to improve the result with the same dataset.
+
+This time the model is separated based on question type.
+However it works well with one same structure of model, even though the answer is vary such as yes/no, one word, or sentence.
+
+As the model structure, *Attention*s and *GRU*s are used this time but
+they are structured sequentially, that is, it can not fully utilize *GPU* strength,
+which is vectorization.
+
+- Processing uploaded image for later use and compressing data size
+- Update models to improve performance both in accuracy and calculation time
+  Such as Memory Network, Attention without sequence
 
 ## Reference:
 [1] [COCO](http://cocodataset.org/)
