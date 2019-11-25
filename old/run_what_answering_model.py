@@ -48,7 +48,7 @@ DEBUG = False
 
 # Train
 vocab_size = 20000
-data_size = 150000
+data_size = 100000
 seq_length = 15
 ans_length = 5 + 2  # maximum answer length + '<bos>' and '<eos>'
 
@@ -58,8 +58,8 @@ units = 512
 learning_rate = 0.001
 
 batch_size = 128
-epochs = 40
-display_step = 500
+epochs = 10
+display_step = 1000
 
 # make easy to calculate accuracy and loss by average
 step_per_val = 100
@@ -67,7 +67,7 @@ val_size = batch_size * step_per_val
 
 
 def data_generator(dataset, batch_size):
-    steps_per_epoch = (len(dataset)-1) // batch_size + 1
+    steps_per_epoch = len(dataset) // batch_size
 
     for step in range(steps_per_epoch):
         start = step * batch_size
@@ -99,8 +99,10 @@ def data_process(dataset):
 def main(train, val, *, save=False):
     if save:
         # threshold to save model weights
-        min_loss = 10.0
-        weights_path = os.path.join(Config.MODELS.get('WHAT'), 'weights')
+        min_loss = 50.0
+        base_path = Config.MODELS.get('WHAT')
+        enc_weights_path = os.path.join(base_path, 'encoder', 'weights')
+        gen_weights_path = os.path.join(base_path, 'gen', 'weights')
 
     encoder = QuestionImageEncoder(units, vocab_size, embedding_dim)
     model = SequenceGeneratorModel(units,
@@ -180,7 +182,7 @@ def main(train, val, *, save=False):
             hidden = np.zeros((len(l_val), embedding_dim))
             batch_preds = []
 
-            x = np.array([processor.word_index['<bos>']] * len(labels))
+            x = np.array([processor.word_index['<bos>']] * len(l_val))
 
             for i in range(1, ans_length):
                 x, hidden, _ = model(x, in_val[0], features, hidden)
@@ -207,7 +209,8 @@ def main(train, val, *, save=False):
         if save and loss_val < min_loss:
             min_loss = loss_val
             print('Saving model weights')
-            model.save_weights(weights_path)
+            encoder.save_weights(enc_weights_path)
+            model.save_weights(gen_weights_path)
             print('Saved!')
 
 
