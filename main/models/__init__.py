@@ -6,6 +6,7 @@ from ._models import (
     ClassificationModel,
     QuestionImageEncoder,
     SequenceGeneratorModel,
+    QuestionAnswerModel,
 )
 from .common import (
     get_mobilenet_encoder,

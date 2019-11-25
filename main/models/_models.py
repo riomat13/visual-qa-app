@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import os.path
+
 import tensorflow as tf
 
 from main.settings import Config
@@ -36,7 +38,6 @@ class QuestionTypeClassification(tf.keras.Model):
 class ClassificationModel(tf.keras.Model):
     def __init__(self,
                  units,
-                 seq_length,
                  vocab_size,
                  embedding_dim,
                  num_classes):
@@ -194,3 +195,87 @@ class QuestionImageEncoder(tf.keras.Model):
         x = tf.concat([context_img, context_q], axis=-1)
         features = self.fc(x)
         return features, weights
+
+
+class QuestionAnswerModel(tf.keras.Model):
+    def __init__(self, units, ans_length, vocab_size, embedding_dim, model_type):
+        """Question Answering with generating sequence.
+        This is for predicting not for training since it can not
+        apply teacher forcing.
+
+        Args:
+            units: int
+                hidden unit size
+            ans_length: int
+                output sequence length
+                if predict '<EOS>' before reaching this length,
+                may predict all empty later than it
+            vocab_size: int
+            embedding_dim: int
+            model_type: str
+                path to weight data is stored
+                can be selected from
+                ('what', 'why')
+                Note) Other model weights will be added later
+        """
+        model_type = model_type.upper()
+        if model_type not in ('WHAT', 'WHY'):
+            raise ValueError('Invalid model type')
+
+        super(QuestionAnswerModel, self).__init__()
+
+        model_cfg = Config.MODELS[model_type]
+
+        # models
+        # encoding questions and images
+        encoder = QuestionImageEncoder(units, vocab_size, embedding_dim)
+        encoder.load_weights(os.path.join(model_cfg, 'encoder', 'weights'))
+
+        # generating words
+        generator_model = SequenceGeneratorModel(units,
+                                                 vocab_size,
+                                                 embedding_dim,
+                                                 encoder.embedding)
+        generator_model.load_weights(
+            os.path.join(model_cfg, 'gen', 'weights')
+        )
+
+        self.encoder = encoder
+        self.generator = generator_model
+
+        self.ans_length = ans_length
+
+    def call(self, x, qs, imgs, hidden):
+        """Answer sequence generator.
+
+        Args:
+            x: input word
+                (batch_size,)
+            qs: question sequence
+                (batch_size, seq_length)
+            imgs: images
+                (batch_size, 49, 1024)
+
+        Returns:
+        """
+        # use hidden as initial input for sequence generator
+        features, _ = self.encoder(qs, imgs)
+
+        preds = []
+        attention_weights = []
+        prev = x
+
+        for i in range(1, self.ans_length):
+            prev, hidden, weight = self.generator(prev, qs, features, hidden)
+            prev = tf.argmax(prev, axis=-1)
+            preds.append(prev)
+            attention_weights.append(weight)
+
+        preds = tf.stack(preds, axis=1)
+        attention_weights = tf.stack(attention_weights, axis=1)
+        attention_weights = tf.reshape(
+            attention_weights,
+            (-1, self.ans_length-1, qs.shape[1])
+        )
+
+        return preds, attention_weights
