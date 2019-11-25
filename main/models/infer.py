@@ -6,10 +6,12 @@ import os.path
 from functools import partial
 
 import numpy as np
+import tensorflow as tf
 
 from main.settings import Config
 from main.utils.loader import fetch_question_types, load_image
 from main.utils.preprocess import text_processor
+from .common import get_mobilenet_encoder
 from ._base import BaseModel
 from ._models import (
     QuestionTypeClassification,
@@ -21,16 +23,17 @@ log = logging.getLogger(__name__)
 
 
 processor = text_processor(num_words=20000, from_config=True)
+img_encoder = get_mobilenet_encoder()
 # TODO: tmp
 classes = fetch_question_types()
 id2q = [q for q in classes]
-num_classes = len(classes)
 
 # tokens storing IDs for specific tokens
 _tokens = {
     'bos': processor.word_index['<bos>'],
     'eos': processor.word_index['<eos>'],
     'unk': processor.word_index['<unk>'],
+    'pad': processor.word_index['<pad>'],
 }
 
 
@@ -38,20 +41,15 @@ class PredictionModel(BaseModel):
     __instance = None
 
     _model_class = {
-        'Y/N': {2, 6, 8, 10, 11, 13, 14, 15, 16, 17,
-                23, 27, 29, 33, 35, 39, 40, 41, 42,
-                43, 44, 45, 46, 47, 50, 52, 56, 57,
-                58, 59, 62, 64, 66, 68, 76, 79},
-        'WHAT': {1, 4, 5, 7, 12, 19, 20, 21, 22, 24,
-                 25, 26, 28, 37, 38, 48, 51, 53, 54,
-                 67, 75, 76, 77},
-        # TODO:
-        'WHY': set(),
-        'WHICH': set(),
-        'WHO': set(),
-        'WHERE': set(),
-        'HOW': set(),
-        'COUNT': set(),
+        0: 'Y/N',
+        1: 'WHAT',
+        2: 'WHY',
+        3: 'WHICH',
+        4: 'WHO',
+        5: 'WHERE',
+        6: 'HOW',
+        7: 'COUNT',
+        8: 'NONE',
     }
 
     def __init__(self):
@@ -71,7 +69,9 @@ class PredictionModel(BaseModel):
     def type(self):
         return self.__type
 
-    def predict(self, sentence):
+    def predict(self, sentence, img_path):
+        pred = ''
+
         # processor handles list of sentences
         sequence = self._processor(sentence)
 
@@ -83,13 +83,42 @@ class PredictionModel(BaseModel):
             log.warning('not found any word from vocabulary')
             return 'Can not understand the question'
 
-        pred = predict_question_type(sequence)
+        pred_id = predict_question_type(sequence)
+        w = None
 
-        if pred in self._model_class['Y/N']:
-            pred = predict_yes_or_no(sequence)
-        elif pred in self._model_class['WHAT']:
-            pred = predict_what(sequence)
-        return pred
+        if pred_id == 0:
+            pred, w = predict_yes_or_no(sequence, img_path)
+            if pred[0] == 0:
+                pred = 'yes'
+            elif pred[0] == 1:
+                pred = 'no'
+            else:
+                pred = 'Sorry, could not understand the question'
+        elif pred_id == 1:
+            pred, w = predict_what(sequence, img_path)
+            pred = convert_output_to_sentence(pred)
+        elif pred_id == 2:
+            pred, w = predict_what(sequence, img_path)
+            pred = convert_output_to_sentence(pred)
+        elif pred_id == 3:
+            pred, w = predict_what(sequence, img_path)
+            pred = convert_output_to_sentence(pred)
+        elif pred_id == 4:
+            pred, w = predict_what(sequence, img_path)
+            pred = convert_output_to_sentence(pred)
+        elif pred_id == 5:
+            pred, w = predict_what(sequence, img_path)
+            pred = convert_output_to_sentence(pred)
+        elif pred_id == 6:
+            pred, w = predict_what(sequence, img_path)
+            pred = convert_output_to_sentence(pred)
+        elif pred_id == 8:
+            pred, w = predict_what(sequence, img_path)
+            pred = convert_output_to_sentence(pred)
+        # TODO: add couting model
+        if not pred:
+            pred = 'Sorry, could not understand the question'
+        return pred, w
 
     @classmethod
     def get_model(cls):
@@ -98,11 +127,20 @@ class PredictionModel(BaseModel):
         return PredictionModel.__instance
 
     def _build_model(self):
-        self._models = {
-            'QTYPE': _get_q_type_model(),
-            'Y/N': _get_y_n_model(),
-            'WHAT': _get_what_model(),
-        }
+        # TODO: replace models with type specifig ones
+        models = (
+            _get_q_type_model,
+            _get_y_n_model,
+            _get_what_model,
+            #_get_where_model,
+            #_get_which_model,
+            #_get_who_model,
+            #_get_why_model,
+            #_get_how_model,
+        )
+
+        # load all data
+        awake_models(models)
 
 
 def _set_weights_by_config(type, model):
@@ -131,7 +169,7 @@ def _get_q_type_model():
                 embedding_dim=cfg.get('embedding_dim'),
                 units=cfg.get('units'),
                 vocab_size=cfg.get('vocab_size'),
-                num_classes=num_classes,
+                num_classes=9,
             )
             _set_weights_by_config('QTYPE', model)
 
@@ -174,28 +212,20 @@ def _get_what_model():
             cfg = Config.MODELS['WHAT']
             model = QuestionAnswerModel(
                 units=cfg.get('units'),
-                seq_length=15,
                 ans_length=7,
                 vocab_size=cfg.get('vocab_size'),
                 embedding_dim=cfg.get('embedding_dim'),
-                model_type='WHAT')
-            _set_weights_by_config('WHAT', model)
+                model_type='WHAT'
+            )
 
         return model
 
     return build_model()
 
 
-def awake_models():
+def awake_models(models):
     """Set up models initially."""
-    # ignore tqdm if not installed
-    try:
-        from tqdm import tqdm
-    except ModuleNotFoundError:
-        tqdm = lambda x: x
-
-    # TODO: add models
-    for func in tqdm([_get_q_type_model, _get_y_n_model]):
+    for func in models:
         log.info(f'Loding model: {func.__name__}')
         func()
 
@@ -203,24 +233,26 @@ def awake_models():
 def convert_output_to_sentence(sequence):
     """Converting network sequence to readable output.
     Args:
-        sequence: 2-d numpy.ndarray(dtype=np.int32)
+        sequence: 1-d or 2-d numpy.ndarray(dtype=np.int32)
             sequence represents the predict outputs
+            if 2-d, apply argmax to convert 1-d array
     Returns:
         str: converted sentence to human-readable string
     """
     dim = len(sequence.shape)
-    if dim != 2:
-        raise ValueError('Invalid input shape. Expected 2-dim'
+    if dim == 2:
+        sequence = np.argmax(sequence, axis=-1)
+    elif dim > 2:
+        raise ValueError('Invalid input shape. Expected 2-dim '
                          f'but {dim}-dim is given')
 
-    sequence = np.argmax(sequence, axis=-1)
     result = []
     for idx in sequence:
         # stop if reaches end of sentence
         if idx == _tokens['eos']:
             break
         # skip if token is unknown
-        elif idx == _tokens['unk']:
+        elif idx == _tokens['unk'] or idx == _tokens['pad']:
             continue
 
         result.append(processor.index_word[idx])
@@ -235,14 +267,30 @@ def predict_question_type(sequence):
     pred = model.predict(sequence)
     pred = np.argmax(pred, axis=1)
     pred = int(pred[0])
-    return id2q[pred]
+    return pred
 
 
 def predict_yes_or_no(sequence, img_path):
     model = _get_y_n_model()
     img = load_image(img_path)
+    img = tf.reshape(img, (1, 224, 224, 3))
+    img = img_encoder(img)
 
     # predicted result shape is (1, 3)
-    pred = model(sequence, img)
+    pred, weights = model(sequence, img)
+    pred = np.argmax(pred, axis=1)
+    return pred, weights
+
+
+def predict_what(sequence, img_path):
+    model = _get_what_model()
+    img = load_image(img_path)
+    img = tf.reshape(img, (1, 224, 224, 3))
+    img = img_encoder(img)
+
+    x = np.array([processor.word_index['<bos>']])
+    hidden = np.zeros((1, 256))
+
+    pred, weights = model(x, sequence, img, hidden)
     pred = np.argmax(pred, axis=-1)
-    return pred
+    return pred, weights

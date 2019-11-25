@@ -54,6 +54,9 @@ async def run_model(filepath: str, sentence: str):
         await writer.drain()
         pred = await reader.read(1024)
 
-    pred = pred.decode()
+    pred = pred.decode().strip()
+
+    if pred == '<e>':
+        pred = 'Sorry, some problem occured'
 
     return pred

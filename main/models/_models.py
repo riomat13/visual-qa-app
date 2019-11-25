@@ -2,11 +2,14 @@
 # -*- coding: utf-8 -*-
 
 import os.path
+import logging
 
 import tensorflow as tf
 
 from main.settings import Config
 from .common import Attention
+
+log = logging.getLogger(__name__)
 
 
 class QuestionTypeClassification(tf.keras.Model):
@@ -201,7 +204,13 @@ class QuestionImageEncoder(tf.keras.Model):
 
 
 class QuestionAnswerModel(tf.keras.Model):
-    def __init__(self, units, ans_length, vocab_size, embedding_dim, model_type):
+    def __init__(self,
+                 units,
+                 ans_length,
+                 vocab_size,
+                 embedding_dim,
+                 model_type,
+                 set_weights=True):
         """Question Answering with generating sequence.
         This is for predicting not for training since it can not
         apply teacher forcing.
@@ -220,6 +229,8 @@ class QuestionAnswerModel(tf.keras.Model):
                 can be selected from
                 ('what', 'why')
                 Note) Other model weights will be added later
+            set_weights: bool
+                load weights if set this to True
         """
         model_type = model_type.upper()
         if model_type not in ('WHAT', 'WHY'):
@@ -227,21 +238,23 @@ class QuestionAnswerModel(tf.keras.Model):
 
         super(QuestionAnswerModel, self).__init__()
 
-        model_cfg = Config.MODELS[model_type]
+        model_cfg = Config.MODELS[model_type].get('path')
 
         # models
         # encoding questions and images
         encoder = QuestionImageEncoder(units, vocab_size, embedding_dim)
-        encoder.load_weights(os.path.join(model_cfg, 'encoder', 'weights'))
 
         # generating words
         generator_model = SequenceGeneratorModel(units,
                                                  vocab_size,
                                                  embedding_dim,
                                                  encoder.embedding)
-        generator_model.load_weights(
-            os.path.join(model_cfg, 'gen', 'weights')
-        )
+
+        if set_weights:
+            encoder.load_weights(os.path.join(model_cfg, 'encoder', 'weights'))
+            generator_model.load_weights(
+                os.path.join(model_cfg, 'gen', 'weights')
+            )
 
         self.encoder = encoder
         self.generator = generator_model
@@ -258,8 +271,11 @@ class QuestionAnswerModel(tf.keras.Model):
                 (batch_size, seq_length)
             imgs: images
                 (batch_size, 49, 1024)
+            hidden: hidden units
+                (batch_size, units)
 
         Returns:
+            pred, attention_weights
         """
         # use hidden as initial input for sequence generator
         features, _ = self.encoder(qs, imgs)

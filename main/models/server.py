@@ -8,11 +8,12 @@ import logging
 from main.utils.preprocess import text_processor
 from main.utils.logger import save_log
 from main.orm.models.ml import PredictionScore, RequestLog
-from main.models.infer import predict_question_type, awake_models
+from main.models.infer import predict_question_type, PredictionModel
 
 log = logging.getLogger(__name__)
 
 _processor = None
+predictor = PredictionModel.get_model()
 
 
 async def save_predict_history(filepath, sentence, pred, log_model):
@@ -27,27 +28,27 @@ async def save_predict_history(filepath, sentence, pred, log_model):
 
 @save_log(RequestLog)
 async def run_prediction(reader, writer):
-    global q_type_model
+    global predictor
     global _processor
 
     data = await reader.read(1024)
     filepath, sentence = data.decode().split('\t')
     log.debug(sentence)
-    sentence = _processor(sentence)
 
     try:
         if not os.path.isfile(filepath):
             log.warning('Could not find image')
-            pred = predict_question_type(sentence)
+            pred = 'Could not find image.'
         else:
-            # TODO: add prediction pipeline
-            pred = predict_question_type(sentence)
+            pred, _ = predictor.predict(sentence, filepath)
     except Exception as e:
         log.error(e)
         # send error code
         writer.write(b'<e>')
+        raise
     else:
-        writer.write(pred.encode())
+        pred = pred.encode()
+        writer.write(pred)
     finally:
         await writer.drain()
         writer.close()
@@ -64,12 +65,9 @@ async def run_prediction(reader, writer):
         log.error('Could not store predict history')
 
 
-
 async def run_server(host, port):
     global _processor
 
-    # load models to make run faster to serve
-    awake_models()
     _processor = text_processor(num_words=15, from_config=True)
 
     server = await asyncio.start_server(

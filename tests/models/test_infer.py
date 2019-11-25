@@ -16,6 +16,7 @@ import numpy as np
 from main.settings import Config
 from main.utils.loader import fetch_question_types
 from main.utils.preprocess import text_processor
+from main.models.infer import num_classes
 from main.models.infer import (
     _get_q_type_model,
     _get_y_n_model,
@@ -31,10 +32,11 @@ class PredictionModelTest(unittest.TestCase):
 
     @patch('main.models.infer._set_weights_by_config')
     def test_get_model_instance(self, mock_setter):
-        model = PredictionModel()
         with self.assertRaises(RuntimeError):
+            model = PredictionModel()
             model2 = PredictionModel()
 
+        model = PredictionModel.get_model()
         model2 = PredictionModel.get_model()
 
         self.assertTrue(model is model2)
@@ -51,7 +53,7 @@ class PredictionModelTest(unittest.TestCase):
         ]
 
         for sent in test_sents:
-            res = model.predict(sent)
+            res = model.predict(sent, '')
             self.assertEqual(res, target)
 
     @patch('main.models.infer.predict_yes_or_no')
@@ -66,20 +68,22 @@ class PredictionModelTest(unittest.TestCase):
         # this will be considered as yes/no type
         mock_qtype.return_value = 2
         target = 'test'
-        mock_y_n.return_value = target
+        mock_y_n.return_value = (target, None)
 
-        res = model.predict('test')
+        res, w = model.predict('test', '')
         mock_qtype.assert_called_once_with(sequence)
-        mock_y_n.assert_called_once_with(sequence)
+        mock_y_n.assert_called_once_with(sequence, '')
         self.assertEqual(res, target)
+        # yes/no does not return weights
+        self.assertIsNone(w)
 
 
 class PredictQuestionTypeTest(unittest.TestCase):
 
     def test_predicted_shape(self):
+
         batch_size = 4
         size = 5
-        num_classes = len(fetch_question_types())
         seq = np.arange(size).reshape(-1, size)
 
         model = _get_q_type_model()
@@ -89,11 +93,9 @@ class PredictQuestionTypeTest(unittest.TestCase):
         self.assertEqual(pred.shape, (1, num_classes))
 
     def test_predict_by_function(self):
-        from main.models.infer import classes
-
         seq = np.random.randint(1, 100, (1, 10))
         pred = predict_question_type(seq)
-        self.assertTrue(pred in classes)
+        self.assertTrue(0 <= pred < num_classes)
 
 
 class PredictYesNoTest(unittest.TestCase):
@@ -101,8 +103,8 @@ class PredictYesNoTest(unittest.TestCase):
     @patch('main.models.infer.load_image')
     def test_run_prediction_and_check_shape(self, mock_loader):
         mock_loader.return_value = \
-            np.random.randint(0, 255, (224, 224, 3))
-        pred = predict_yes_or_no('this is test', '')
+            np.random.rand(224, 224, 3)
+        pred, _ = predict_yes_or_no(np.arange(5).reshape(1, -1), '')
         self.assertEqual(pred.shape, (1,))
 
 
@@ -113,7 +115,7 @@ class SetUpModelsTest(unittest.TestCase):
     def test_awaking_models(self, mock_qtype, mock_y_n):
         mock_qtype.__name__ = 'mock_qtype'
         mock_y_n.__name__ = 'mock_y_n'
-        awake_models()
+        awake_models((mock_qtype, mock_y_n))
         mock_qtype.assert_called_once()
         mock_y_n.assert_called_once()
 
