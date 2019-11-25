@@ -20,7 +20,7 @@ class QuestionTypeClassification(tf.keras.Model):
         self.gru = tf.keras.layers.GRU(units,
                                        return_sequences=False,
                                        recurrent_initializer='glorot_uniform')
-        self.dense = tf.keras.layers.Dense(256)
+        self.dense = tf.keras.layers.Dense(units)
         self.out_layer = tf.keras.layers.Dense(num_classes)
 
     def call(self, sequences):
