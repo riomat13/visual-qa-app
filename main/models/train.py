@@ -121,7 +121,6 @@ def make_training_seq_model(model, sequence_length, optimizer,
         Args:
             x: initial word of generated sequence
             inputs, labels: training set, inputs must be a list or tuple
-            inputs_val, labels_val: validation set(optional)
         Returns:
             loss: float
             predicts:

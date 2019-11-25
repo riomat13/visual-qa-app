@@ -14,7 +14,7 @@ import tensorflow as tf
 
 from main.settings import Config
 from main.models import QuestionTypeClassification
-from main.models.train import train_cls_step
+from main.models.train import make_training_cls_model
 from main.utils.loader import VQA, fetch_question_types
 from main.utils.preprocess import text_processor
 from main.metrics import calculate_accuracy
@@ -98,7 +98,10 @@ def main(*, training=True, save_to=None, load_from=None, val=0.2):
 
     # TRAINING STEP
     if training:
+        min_loss_val = 1.0
+
         print('Start training')
+
         inputs_train = processor(inputs_train)
         inputs_val = [processor(inputs_val)]
 
@@ -111,6 +114,9 @@ def main(*, training=True, save_to=None, load_from=None, val=0.2):
         loss = 0
         optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
 
+        train_cls_step = make_training_cls_model(model, optimizer,
+                                                 loss='sparse_categorical_crossentropy')
+
         # execute training
         for epoch in range(epochs):
             print('=====' * 10)
@@ -122,13 +128,16 @@ def main(*, training=True, save_to=None, load_from=None, val=0.2):
             for batch, (ins, outs) in enumerate(dataset):
                 st = time.time()
                 ins = [ins]
-                batch_loss, accuracy, accuracy_val = \
-                    train_cls_step(model, ins, outs, optimizer,
-                                   inputs_val, labels_val,
-                                   loss='sparse_categorical_crossentropy')
+                batch_loss, accuracy = train_cls_step(ins, outs)
+
                 end = time.time()
 
                 if batch % 100 == 0:
+                    out_val = model(*inputs_val)
+                    cost_val = tf.keras.losses.sparse_categorical_crossentropy(labels_val, out_val, from_logits=True)
+                    loss_val = tf.reduce_mean(cost_val)
+                    acc_val = calculate_accuracy(out_val, labels_val)
+
                     if DEBUG:
                         print('[DEBUG] Batch:', batch)
                         for layer in model.layers:
@@ -141,14 +150,16 @@ def main(*, training=True, save_to=None, load_from=None, val=0.2):
                     batch_loss = batch_loss.numpy()
                     print('  Batch:', batch)
                     # TODO: add accuracy
-                    print('    Loss: {:.4f}  Accuracy(Train): {:.4f}  Accuracy(Val): {:.4f}  Time(batch): {:.4f}s'
-                            .format(batch_loss, accuracy, accuracy_val, end-st))
+                    print('    Loss: {:.4f}  Accuracy(Train): {:.4f}  Loss(Val): {:.4f}  Accuracy(Val): {:.4f}  Time(batch): {:.4f}s'
+                            .format(batch_loss, accuracy,loss_val,  acc_val, end-st))
 
-        print('Saving models...')
-        # save tokenizer info for resuse
-        processor.to_json('./.env/tokenizer_config.json')
-        model.save_weights(save_to)
-        print('Saved!!')
+            if loss_val < min_loss_val:
+                min_loss_val = loss_val
+                print('Saving models...')
+                # save tokenizer info for resuse
+                processor.to_json('./.env/tokenizer_config.json')
+                model.save_weights(save_to)
+                print('Saved!!')
 
         print()
         print('Training completed')
