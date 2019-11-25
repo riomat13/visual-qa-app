@@ -47,13 +47,56 @@ class Config(object):
             'embedding_dim': 256,
             'units': 256,
         },
-        # what
+        # TODO: adjust hyper-parameter settings for each model
         'WHAT': {
             'path': os.path.join(ROOT_DIR, 'checkpoints', 'what'),
             'ans_length': 7,
             'vocab_size': 20000,
             'embedding_dim': 256,
-            'units': 256,
+            'units': 512,
+        },
+        'WHERE': {
+            'path': os.path.join(ROOT_DIR, 'checkpoints', 'where'),
+            'ans_length': 7,
+            'vocab_size': 20000,
+            'embedding_dim': 256,
+            'units': 512,
+        },
+        'WHICH': {
+            'path': os.path.join(ROOT_DIR, 'checkpoints', 'which'),
+            'ans_length': 7,
+            'vocab_size': 20000,
+            'embedding_dim': 256,
+            'units': 512,
+        },
+        'WHO': {
+            'path': os.path.join(ROOT_DIR, 'checkpoints', 'who'),
+            'ans_length': 7,
+            'vocab_size': 20000,
+            'embedding_dim': 256,
+            'units': 512,
+        },
+        'WHY': {
+            'path': os.path.join(ROOT_DIR, 'checkpoints', 'why'),
+            'ans_length': 7,
+            'vocab_size': 20000,
+            'embedding_dim': 256,
+            'units': 512,
+        },
+        'COUNT': {
+            'path': os.path.join(ROOT_DIR, 'checkpoints', 'count'),
+            'ans_length': 7,
+            'vocab_size': 20000,
+            'embedding_dim': 256,
+            'units': 512,
+        },
+        # non-categorized group
+        'NONE': {
+            'path': os.path.join(ROOT_DIR, 'checkpoints', 'none'),
+            'ans_length': 7,
+            'vocab_size': 20000,
+            'embedding_dim': 256,
+            'units': 512,
         },
         # text_tokenizer config file path
         'TOKENIZER': {
