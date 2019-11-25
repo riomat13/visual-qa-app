@@ -34,7 +34,7 @@ class MobileNetEncoderTest(unittest.TestCase):
 
         out = model(sample_normalized_imgs)
 
-        self.assertEqual(out.shape, (batch_size, 7, 7, 1024))
+        self.assertEqual(out.shape, (batch_size, 49, 1024))
 
 
 class AttentionModelTest(unittest.TestCase):

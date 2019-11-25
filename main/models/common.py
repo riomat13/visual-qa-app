@@ -28,6 +28,7 @@ def _get_mobilenet_encoder():
             mobilenet_input = mobilenet.input
             # shape of the last layer in MobileNet: (7, 7, 1024)
             out = mobilenet.layers[-1].output
+            out = tf.reshape(out, (-1, 49, 1024))
 
             model = tf.keras.Model(
                 inputs=mobilenet_input,
