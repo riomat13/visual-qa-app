@@ -67,7 +67,7 @@ def make_training_cls_model(model, optimizer,
 
 
 def make_training_seq_model(model, sequence_length, optimizer,
-                            encoder_model=None,
+                            encoder_model,
                             loss='sparse_categorical_crossentropy'):
     """Build training step function for sequence generator.
 
@@ -138,7 +138,7 @@ def make_training_seq_model(model, sequence_length, optimizer,
         nonlocal loss_func
 
         with tf.GradientTape() as tape:
-            features = encoder_model(*inputs)
+            features, q_encoded = encoder_model(*inputs)
 
             if isinstance(features, tuple):
                 features, *_ = features
@@ -150,7 +150,7 @@ def make_training_seq_model(model, sequence_length, optimizer,
             attention_weights = []
 
             for i in range(1, sequence_length):
-                pred, hidden, weights = model(x, inputs[0], features, hidden)
+                pred, hidden, weights = model(x, q_encoded, features, hidden)
                 cost = loss_func(labels[:, i], pred, from_logits=True, axis=-1)
                 x = labels[:, i]
                 loss += tf.reduce_mean(cost)
