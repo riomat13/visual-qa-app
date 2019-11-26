@@ -43,7 +43,7 @@ class Config(object):
         # yes/no
         'Y/N': {
             'path': os.path.join(ROOT_DIR, 'checkpoints', 'y_n'),
-            'vocab_size': 20000,
+            'vocab_size': 15000,
             'embedding_dim': 256,
             'units': 256,
         },
