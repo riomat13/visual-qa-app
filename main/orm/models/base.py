@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from sqlalchemy import Column, String
+from sqlalchemy import Column, String, Boolean
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from main.orm.db import Base
@@ -14,6 +14,7 @@ class User(BaseMixin, Base):
     username = Column(String(32), nullable=False, unique=True)
     email = Column(String(128), nullable=False)
     password_hash = Column(String(128), nullable=False)
+    is_admin = Column(Boolean, default=False)
 
     @property
     def password(self):

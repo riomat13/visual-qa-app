@@ -4,36 +4,38 @@
 import unittest
 
 from .base import _Base
-from main.orm.models.web import Note, Citation
+from main.orm.models.web import Update, Citation
 
 
-class NoteModelTest(_Base):
+class UpdateModelTest(_Base):
 
     def test_save_and_get_data(self):
         content = 'this is the first content.'
-        note = Note(content=content)
-        note.save()
+        update = Update(content=content)
+        update.save()
 
-        data = Note.query().first()
+        data = Update.query().first()
 
+        self.assertEqual(data.id, update.id)
         self.assertEqual(data.content, content)
 
 class CitationModelTest(_Base):
 
     def test_save_and_get_data(self):
         author = 'tester'
-        name = 'test content'
+        title = 'test content'
         invalid_year = 1980
 
         with self.assertRaises(ValueError):
-            cit = Citation(author=author, name=name, year=invalid_year)
+            cite = Citation(author='invalid', title='invalid', year=invalid_year)
 
         year = 1994
-        cit = Citation(author=author, name=name, year=year)
-        cit.save()
+        cite = Citation(author=author, title=title, year=year)
+        cite.save()
 
         data = Citation.query().first()
 
+        self.assertEqual(data.id, cite.id)
         self.assertEqual(data.author, author)
 
 

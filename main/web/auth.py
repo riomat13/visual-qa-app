@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from functools import wraps
+from functools import wraps, partial
 
-from flask import g, redirect, url_for, session
+from flask import g, redirect, url_for, session, abort
 
 from . import base
 from main.orm.models.base import User
@@ -27,12 +27,23 @@ def verify_user(username, password, email=None):
     return True
 
 
-def login_required(view):
-    """Decorator for authentication check."""
+def login_required(view=None, *, admin=False):
+    """Decorator for authentication check.
+
+    Args:
+        admin: bool
+            if this is set to True
+            User logging in must be admin.
+    """
+    if view is None:
+        return partial(login_required, admin=admin)
+
     @wraps(view)
-    def wrapper(**kwargs):
+    def wrapper(*, _admin=admin, **kwargs):
         if g.user is None:
             return redirect(url_for('base.login'))
+        if _admin and not g.user.is_admin:
+            return abort(403)
         return view(**kwargs)
     return wrapper
 

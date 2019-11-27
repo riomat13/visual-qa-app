@@ -3,7 +3,9 @@
 
 import unittest
 from unittest.mock import patch, Mock
+import logging
 
+from functools import partial
 import io
 
 from flask import g
@@ -14,7 +16,9 @@ set_config('test')
 from main.web.app import create_app
 from main.orm.db import Base
 from main.orm.models.base import User
-from main.orm.models.web import Note, Citation
+from main.orm.models.web import Update, Citation
+
+logging.disable(logging.CRITICAL)
 
 
 admin = {
@@ -26,27 +30,74 @@ admin = {
 
 class _Base(unittest.TestCase):
 
-    @classmethod
-    def setUpClass(cls):
+    def setUp(self):
         app = create_app('test')
-        cls.app_context = app.app_context()
-        cls.app_context.push()
+        self.app_context = app.app_context()
+        self.app_context.push()
 
-        cls.client = app.test_client()
+        self.client = app.test_client()
         from main.orm.db import engine
-        cls.engine = engine
-        Base.metadata.create_all(cls.engine)
+        self.engine = engine
+        Base.metadata.create_all(self.engine)
 
-        # set up user for authentication
+        # set up user for authentication without admin
         user = User(username=admin['username'],
                     email=admin['email'],
                     password=admin['password'])
         user.save()
 
-    @classmethod
-    def tearDownClass(cls):
-        Base.metadata.drop_all(cls.engine)
-        cls.app_context.pop()
+    def tearDown(self):
+        Base.metadata.drop_all(self.engine)
+        self.app_context.pop()
+
+
+    def login(self):
+        self.client.post(
+            '/login',
+            data=dict(username=admin['username'],
+                      password=admin['password'],
+                      email=admin['email'])
+        )
+
+    def logout(self):
+        self.client.get('/logout')
+
+    def check_status_code_with_admin(self, path, method='GET', **kwargs):
+        user = User.query() \
+            .filter_by(username=admin['username']) \
+            .first()
+
+        if method == 'GET':
+            req = self.client.get
+            target_code = 200
+        elif method == 'POST':
+            req = partial(self.client.post, data=kwargs)
+            target_code = 302
+        elif method == 'PUT':
+            req = partial(self.client.put, data=kwargs)
+            target_code = 302
+
+        # redirect without login
+        response = req(path)
+        self.assertEqual(response.status_code, 302)
+
+        # permission denied if not admin
+        self.login()
+        response = req(path)
+        self.assertEqual(response.status_code, 403)
+        self.logout()
+
+        # can access with admin
+        user.is_admin = True
+        user.save()
+        self.login()
+
+        response = req(path)
+        self.assertEqual(response.status_code, target_code)
+
+        self.logout()
+        user.is_admin = False
+        user.save()
 
 
 class GeneralBaseViewResponseTest(_Base):
@@ -143,7 +194,7 @@ class PredictionTest(_Base):
 
 class NoteViewTest(_Base):
 
-    @patch('main.web.views.Note.query')
+    @patch('main.web.views.Update.query')
     @patch('main.web.views.Citation.query')
     def test_note_view(self, mock_cits, mock_notes):
         mock_note = mock_notes.return_value
@@ -160,6 +211,60 @@ class NoteViewTest(_Base):
 
         self.assertIn(b'test_notes', response.data)
         self.assertIn(b'test_refs', response.data)
+
+
+class UpdateFormViewTest(_Base):
+
+    def test_update_register_page(self):
+        self.check_status_code_with_admin('/update/register')
+
+    def test_update_edit_page(self):
+        update = Update(content='test')
+        update.save()
+        id_ = update.id
+
+        path = f'/update/edit/{id_}'
+
+        self.check_status_code_with_admin(path)
+
+        target_content = 'test content'
+        self.check_status_code_with_admin(
+            path,
+            method='PUT',
+            content=target_content,
+        )
+
+        # check if data is updated
+        update_after = Update.get(id_)
+        self.assertEqual(update_after.content, target_content)
+
+
+class ReferenceFormViewTest(_Base):
+
+    def test_reference_register_view(self):
+        self.check_status_code_with_admin('/reference/register')
+
+    def test_reference_edit_view(self):
+        cite = Citation(author='tester', title='test')
+        cite.save()
+        id_ = cite.id
+
+        path = f'/reference/edit/{id_}'
+
+        self.check_status_code_with_admin(path)
+
+        target_title = 'test title'
+        self.check_status_code_with_admin(
+            path,
+            method='PUT',
+            author='tester',
+            title=target_title,
+        )
+
+        # check if data is updated
+        cite_after = Citation.get(id_)
+        self.assertEqual(cite_after.title, target_title)
+
 
 if __name__ == '__main__':
     unittest.main()

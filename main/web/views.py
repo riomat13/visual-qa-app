@@ -9,10 +9,10 @@ from werkzeug import secure_filename
 
 from . import base
 from main.settings import Config
-from main.web.forms import QuestionForm
+from main.web.forms import QuestionForm, UpdateForm, CitationForm
 from main.web.auth import verify_user, login_required
 from main.models.client import run_model
-from main.orm.models.web import Note, Citation
+from main.orm.models.web import Update, Citation
 from main.orm.models.data import Image, Question
 
 
@@ -103,9 +103,64 @@ def prediction():
 
 @base.route('/note')
 def note():
-    updates = [note.to_dict() for note in Note.query().all()]
+    updates = [update.to_dict() for update in Update.query().all()]
     references = [ref.to_dict() for ref in Citation.query().all()]
 
     return render_template('note.html',
                            updates=updates,
                            references=references)
+
+
+@base.route('/update/register', methods=['GET', 'POST'])
+@login_required(admin=True)
+def update_register():
+    form = UpdateForm()
+
+    if form.validate_on_submit():
+        content = form.content.data
+        Update(content=content).save()
+        return redirect(url_for('base.note'))
+    return render_template('update_form.html', form=form)
+
+
+@base.route('/update/edit/<int:update_id>', methods=['GET', 'PUT'])
+@login_required(admin=True)
+def update_edit(update_id):
+    update = Update.get(update_id)
+    form = UpdateForm()
+
+    if form.validate_on_submit():
+        update.content = form.content.data
+        update.save()
+        return redirect(url_for('base.note'))
+    return render_template('update_form.html', form=form)
+
+
+@base.route('/reference/register', methods=['GET', 'POST'])
+@login_required(admin=True)
+def ref_register():
+    form = CitationForm()
+    if form.validate_on_submit():
+        author = form.author.data
+        title = form.title.data
+        year = form.year.data
+        url = form.url.data
+        Citation(author=author, name=name, year=year, link=link).save()
+        return redirect(url_for('base.note'))
+    return render_template('citation_form.html', form=form)
+
+
+@base.route('/reference/edit/<int:ref_id>', methods=['GET', 'PUT'])
+@login_required(admin=True)
+def ref_edit(ref_id):
+    cite = Citation.get(ref_id)
+
+    form = CitationForm()
+    if form.validate_on_submit():
+        cite.author = form.author.data
+        cite.title = form.title.data
+        cite.year = form.year.data
+        cite.url = form.url.data
+        cite.save()
+        return redirect(url_for('base.note'))
+    return render_template('citation_form.html', form=form)

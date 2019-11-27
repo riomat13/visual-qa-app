@@ -7,7 +7,7 @@ from main.settings import set_config
 set_config('test')
 
 from main.web.app import create_app
-from main.web.forms import QuestionForm
+from main.web.forms import QuestionForm, CitationForm
 
 
 class QuestionFormTest(unittest.TestCase):
