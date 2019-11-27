@@ -6,8 +6,8 @@
 <div class="prediction-form">
   {% for message in get_flashed_messages() %}
   <div class="alert alert-warning">
-  {{ message }}
-  <span class="close">&times;</sapn>
+    {{ message }}
+    <span class="close">&times;</sapn>
   </div>
   {% endfor %}
   <form method="POST" enctype="multipart/form-data">
@@ -15,18 +15,25 @@
       <input type="submit" name="action" value="upload">
   </form>
   {% if filename %}
-      <img src="/static/media/uploaded/{{ filename }}" alt="Loaded Image" height="224">
+    <img src="/static/media/uploaded/{{ filename }}" alt="Loaded Image" height="224">
   {% endif %}
-  <form method="POST">
+  <div id="question-form">
+    <form method="POST">
       {{ form.hidden_tag() }}
-      {{ form.question.label }}:{{ form.question() }}
-      <input type="submit" class="btn btn-sm" name="action" value="Submit">
-  </form>
+      <div class="row">
+        <div class="col-20">
+          {{ form.question.label(class_="form-label") }}
+        </div>
+        <div class="col-60">
+          {{ form.question(class_="form-input") }}
+        </div>
+        <input type="submit" id="question-submit" class="btn btn-sm" name="action" value="Submit">
+      </div>
+    </form>
+  </div>
   {% if prediction %}
   <p>Question: {{ question }}</p>
   <p>Predicted result: {{ prediction }}</p>
-  {% else %}
-  <p>Example: Is there any person</p>
   {% endif %}
 </div>
 {% endblock content %}

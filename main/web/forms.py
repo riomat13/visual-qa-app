@@ -2,8 +2,20 @@
 # -*- coding: utf-8 -*-
 
 from flask_wtf import FlaskForm
-from wtforms import Form, StringField, IntegerField, SubmitField, validators
+from wtforms import (
+    Form,
+    StringField, IntegerField, PasswordField,
+    SubmitField,
+    validators
+)
 from wtforms.validators import Length, DataRequired
+
+
+class UserForm(FlaskForm):
+    username = StringField('Username', validators=[DataRequired()])
+    email = StringField('Email', validators=[DataRequired()])
+    password = PasswordField('Password', validators=[DataRequired()])
+    submit = SubmitField('Login')
 
 
 class QuestionForm(FlaskForm):

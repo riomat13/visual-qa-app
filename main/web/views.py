@@ -3,17 +3,20 @@
 
 import os.path
 import asyncio
+import logging
 
 from flask import g, request, render_template, redirect, url_for, session, flash
 from werkzeug import secure_filename
 
 from . import base
 from main.settings import Config
-from main.web.forms import QuestionForm, UpdateForm, CitationForm
+from main.web.forms import UserForm, QuestionForm, UpdateForm, CitationForm
 from main.web.auth import verify_user, login_required
 from main.models.client import run_model
 from main.orm.models.web import Update, Citation
 from main.orm.models.data import Image, Question
+
+log = logging.getLogger(__name__)
 
 
 @base.route('/')
@@ -164,3 +167,21 @@ def ref_edit(ref_id):
         cite.save()
         return redirect(url_for('base.note'))
     return render_template('citation_form.html', form=form)
+
+
+@base.app_errorhandler(400)
+def bad_request(e):
+    log.error(e)
+    return '<h2>400 Bad Request</h2>', 400
+
+
+@base.app_errorhandler(403)
+def forbidden(e):
+    log.error(e)
+    return '<h2>403 Forbidden</h2>', 403
+
+
+@base.app_errorhandler(404)
+def page_not_found(e):
+    log.error(e)
+    return '<h2>404 Page Not Found</h2>', 404

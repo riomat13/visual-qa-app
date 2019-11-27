@@ -4,26 +4,58 @@
 }
 
 body {
-    box-sizing: border-box;
-    font-family: Arial, sans-serif;
+  box-sizing: border-box;
+  font-family: Arial, sans-serif;
 }
 
-h1, h2 {
-    padding: 12px;
+h1,
+h2 {
+  padding: 12px;
 }
 
 p {
-    margin: 4px;
+  margin: 4px;
 }
 
-input[type=text] {
-    font-size: 1.0rem;
-    padding: 8px 14px;
-    margin: 8px 0;
+input[type="text"],
+input[type="password"] {
+  box-sizing: border-box;
+  font-size: 1rem;
+  padding: 8px 12px;
+  margin: 8px 0;
+  width: 90%;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+}
+
+.row:after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+.col-20 {
+  float: left;
+  width: 20%;
+}
+
+.col-25 {
+  float: left;
+  width: 25%;
+}
+
+.col-60 {
+  float: left;
+  width: 60%;
+}
+
+.col-75 {
+  float: left;
+  width: 75%;
 }
 
 .navbar {
-    background-color: #444;
+  background-color: #444;
 }
 
 .navbar ul {
@@ -38,96 +70,150 @@ input[type=text] {
 }
 
 .navbar li a {
-    display: block;
-    padding: 14px 16px;
-    font-size: 1.2rem;
-    text-align: center;
-    color: #eee;
-    text-decoration: none;
+  display: block;
+  padding: 14px 16px;
+  font-size: 1.2rem;
+  text-align: center;
+  color: #eee;
+  text-decoration: none;
+}
+
+.navbar li a.right {
+  float: right;
 }
 
 .navbar li a:hover {
-    background-color: #777;
-    color: #fff;
+  background-color: #777;
+  color: #fff;
 }
 
 .navbar li a.active {
-    background-color: #2f2f2f;
-    pointer-events: none;
-    cursor: default;
+  background-color: #2f2f2f;
+  pointer-events: none;
+  cursor: default;
 }
 
 .container {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 16px;
-    height: 100%;
-    width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 16px;
+  height: 100%;
+  width: 100%;
 }
 
 .prediction-form {
-    padding: 20px;
+  padding: 20px;
 }
 
 .prediction-form img {
-    margin: 20px 0;
+  margin: 20px 0;
 }
 
 .btn {
-    display: inline-block;
-    border: none;
-    text-align: center;
-    text-decoration: none;
+  display: inline-block;
+  border: none;
+  text-align: center;
+  text-decoration: none;
 }
 
 .btn:hover {
-    cursor: pointer;
-    opacity: 0.8;
+  cursor: pointer;
+  opacity: 0.8;
 }
 
 .btn-md {
-    font-size: 1.0rem;
-    padding: 10px 16px;
-    border-radius: 4px;
+  font-size: 1rem;
+  padding: 10px 16px;
+  border-radius: 4px;
 }
 
 .btn-sm {
-    font-size: 0.9rem;
-    padding: 8px 12px;
-    border-radius: 3px;
+  font-size: 0.9rem;
+  padding: 8px 12px;
+  border-radius: 3px;
 }
 
 .btn-primary {
-    background-color: #2196F3;
-    color: #fff;
+  background-color: #2196f3;
+  color: #fff;
 }
 
 .btn-success {
-    background-color: #4CAF50;
-    color: #fff;
+  background-color: #4caf50;
+  color: #fff;
 }
 
 .close {
-    float: right;
+  float: right;
 }
 
 .close:hover {
-    cursor: pointer;
+  cursor: pointer;
 }
 
 .alert {
-    width: 400px;
-    padding: 14px 16px;
-    margin-bottom: 14px;
-    border-radius: 4px;
+  width: 400px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  border-radius: 4px;
 }
 
 .alert-warning {
-    background-color: rgba(217,83,79, 0.4);
-    color: #d9534f;
-    border: 1px solid rgba(217, 83, 79, 0.5);
+  background-color: rgba(217, 83, 79, 0.3);
+  color: #d9534f;
+  border: 1px solid rgba(217, 83, 79, 0.5);
 }
 
-.alert-warning>.close:hover {
-    color: #b2b2b2;
+.alert-warning > .close:hover {
+  color: #b2b2b2;
+}
+
+.form-row {
+  margin-bottom: 15px;
+}
+
+.form-label,
+.form-input {
+  font-size: 1rem;
+  padding: 16px 8px;
+}
+
+.form-label {
+  display: inline-block;
+}
+
+.edit-form {
+  padding: 10px;
+  width: 90%;
+  max-width: 600px;
+}
+
+#login-form {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 30px 15px;
+  width: 400px;
+  background-color: #eee;
+  border-radius: 6px;
+}
+
+#login-submit {
+  margin-left: 25%;
+}
+
+#question-form {
+  display: block;
+  width: 400px;
+}
+
+#question-submit {
+  display: inline-block;
+  margin: 10px 0;
+}
+
+#edit-submit-btn {
+  margin-top: 20px;
+  margin-left: 25%;
 }

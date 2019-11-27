@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block title %} - Form - Citation{% endblock title %}
+{% block content %}
+<h2>Citation Form</h2>
+<div class="edit-form">
+  <form method="POST">
+    {{ form.hidden_tag() }}
+    <div class="col-25">
+      {{ form.content.label(class_="form-label") }}
+    </div>
+    <div class="col-75">
+      {{ form.content(class_="form-input") }}
+    </div>
+    <div class="row form-row">
+      {{ form.submit(id="edit-submit-btn", class_="btn btn-md btn-success") }}
+    </div>
+  </form>
+</div>
+{% endblock %}

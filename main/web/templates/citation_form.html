@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block title %} - Form - Citation{% endblock title %}
+{% block content %}
+<h2>Citation Form</h2>
+<div class="edit-form">
+  <form method="POST">
+    {{ form.hidden_tag() }}
+    <div class="col-25">
+      {{ form.author.label(class_="form-label") }}
+    </div>
+    <div class="col-75">
+      {{ form.author(class_="form-input") }}
+    </div>
+    <div class="row form-row">
+      <div class="col-25">
+        {{ form.title.label(class_="form-label") }}(required)
+      </div>
+      <div class="col-75">
+        {{ form.title(class_="form-input") }}
+      </div>
+    </div>
+    <div class="row form-row">
+      <div class="col-25">
+        {{ form.year.label(class_="form-label") }}
+      </div>
+      <div class="col-75">
+        {{ form.year(class_="form-input") }}
+      </div>
+    </div>
+    <div class="row form-row">
+      <div class="col-25">
+        {{ form.url.label(class_="form-label") }}
+      </div>
+      <div class="col-75">
+        {{ form.url(class_="form-input") }}
+      </div>
+    </div>
+    <div class="row form-row">
+      {{ form.submit(id="edit-submit-btn", class_="btn btn-md btn-success") }}
+    </div>
+  </form>
+</div>
+{% endblock %}
