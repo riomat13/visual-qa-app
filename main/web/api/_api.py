@@ -151,14 +151,14 @@ def bad_request(e):
 @api.app_errorhandler(403)
 def forbidden(e):
     log.error(e)
-    response = jsonify(error='403 Forbidden')
+    response = jsonify(error='403 Permission Denied')
     response.status_code = 403
     return response
 
 
-@api.app_errorhandler(404)
-def page_not_found(e):
-    log.error(e)
+@api.route('/<path:invalid_url>')
+def page_not_found(invalid_url):
+    log.error(f'404 Not Found: /api/{invalid_url}')
     response = jsonify(error='404 Page Not Found')
     response.status_code = 404
     return response
