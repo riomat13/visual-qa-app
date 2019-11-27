@@ -235,23 +235,15 @@ class ExtractRequestLogsTest(_Base):
         target_size = 3
 
         target_type = 'question_type'
-        base_filename = 'img{}.jpg'
-        QuestionType(type=target_type).save()
-        QuestionType(type='dummy').save()
+        target_qtype = QuestionType(type=target_type)
+        target_qtype.save()
+        dummy_qtype = QuestionType(type='dummy')
+        dummy_qtype.save()
 
-        target_qtype = QuestionType.query() \
-            .filter_by(type=target_type) \
-            .first()
-        dummy_qtype = QuestionType.query() \
-            .filter_by(type='dummy') \
-            .first()
-
-        for i in range(size):
-            Image(filename=base_filename.format(i)).save()
-            Question(question='test question').save()
-
-        img = Image.query().first()
-        question = Question.query().first()
+        img = Image(filename='img.jpg')
+        img.save()
+        question = Question(question='test question')
+        question.save()
 
         for i in range(target_size):
             RequestLog(question_type=target_qtype,
@@ -317,23 +309,15 @@ class ExtractPredictionScoreLogsTest(_Base):
         target_size = 3
 
         target_type = 'question_type'
-        base_filename = 'img{}.jpg'
-        QuestionType(type=target_type).save()
-        QuestionType(type='dummy').save()
+        target_qtype = QuestionType(type=target_type)
+        target_qtype.save()
+        dummy_qtype = QuestionType(type='dummy')
+        dummy_qtype.save()
 
-        target_qtype = QuestionType.query() \
-            .filter_by(type=target_type) \
-            .first()
-        dummy_qtype = QuestionType.query() \
-            .filter_by(type='dummy') \
-            .first()
-
-        for i in range(size):
-            Image(filename=base_filename.format(i)).save()
-            Question(question='test question').save()
-
-        img = Image.query().first()
-        question = Question.query().first()
+        img = Image(filename='img.jpg')
+        img.save()
+        question = Question(question='test question')
+        question.save()
 
         for i in range(target_size):
             RequestLog(question_type=target_qtype,

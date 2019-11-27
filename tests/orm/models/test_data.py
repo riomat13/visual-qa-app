@@ -15,23 +15,25 @@ class ImageModelTest(_Base):
 
     def test_image_model_save_and_extract(self):
         fname = 'test.jpg'
-        Image(filename=fname).save()
+        img = Image(filename=fname)
+        img.save()
 
         data = Image.query().first()
 
+        self.assertEqual(data.id, img.id)
         self.assertEqual(data.filename, fname)
 
     def test_update_image_state(self):
         fname = 'test.jpg'
-        Image(filename=fname).save()
+        img = Image(filename=fname)
+        img.save()
 
         data = Image.query().filter_by(filename=fname).first()
-        id_ = data.id
         data.update()
 
         target = f'{id_:05d}.jpg'
 
-        data = Image.query().filter_by(id=id_).first()
+        self.assertNotEqual(data.filename, fname)
         self.assertEqual(data.filename, target)
 
 

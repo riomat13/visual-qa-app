@@ -17,7 +17,7 @@ from main.orm.models.ml import (
 )
 from main.orm.models.data import Image, Question
 
-logging.disable(logging.CRITICAL)
+#logging.disable(logging.CRITICAL)
 
 SAMPLE_TEXT = 'sample text'
 
@@ -36,6 +36,7 @@ class MLModelTest(_Base):
 
         data = MLModel.query().first()
 
+        self.assertEqual(data.id, model.id)
         self.assertEqual(data.name, model_name)
 
     def test_model_type_choice_field_work(self):
@@ -66,7 +67,8 @@ class MLModelTest(_Base):
                          module='main.models',
                          object='Class')
 
-        model2.save()
+        with self.assertLogs(level=logging.ERROR):
+            model2.save()
 
         data = MLModel.query().filter_by(name=model_name).first()
         self.assertEqual(data.category, cat)
@@ -113,15 +115,14 @@ class RequestLogTest(_Base):
     def setUp(self):
         super(RequestLogTest, self).setUp()
 
-        QuestionType(type='testcase').save()
-        Question(question='is this test').save()
+        self.qtype = QuestionType(type='testcase')
+        self.qtype.save()
 
-        Image(filename='test.jpg').save()
+        self.question = Question(question='is this test')
+        self.question.save()
 
-        # take actual stored data from DB
-        self.qtype = QuestionType.query().filter_by(type='testcase').first()
-        self.question = Question.query().filter_by(question='is this test').first()
-        self.img = Image.query().filter_by(filename='test.jpg').first()
+        self.img = Image(filename='test.jpg')
+        self.img.save()
 
     def test_model_request_log_saved(self):
         log = RequestLog(
@@ -143,17 +144,17 @@ class PredictionScoreTest(_Base):
     def setUp(self):
         super(PredictionScoreTest, self).setUp()
 
-        QuestionType(type='testcase').save()
-        Question(question='is this test').save()
+        self.qtype = QuestionType(type='testcase')
+        self.qtype.save()
 
-        Image(filename='test.jpg').save()
+        self.question = Question(question='is this test')
+        self.question.save()
 
-        # take actual stored data from DB
-        self.qtype = QuestionType.query().filter_by(type='testcase').first()
-        self.question = Question.query().filter_by(question='is this test').first()
-        self.img = Image.query().filter_by(filename='test.jpg').first()
+        self.img = Image(filename='test.jpg')
+        self.img.save()
+
     def test_model_saved_properly(self):
-        predict = 'some result'
+        test_predict = 'some result'
         log = RequestLog(
             question_type=self.qtype,
             question=self.question,
@@ -162,12 +163,14 @@ class PredictionScoreTest(_Base):
             log_text=SAMPLE_TEXT)
         log.save()
 
-        PredictionScore(prediction=predict, log=log, rate=1).save()
+        pred = PredictionScore(prediction=test_predict, log=log, rate=1)
+        pred.save()
 
         data = PredictionScore.query().first()
 
         # check saved properly
-        self.assertEqual(data.prediction, predict)
+        self.assertEqual(data.prediction, test_predict)
+        self.assertEqual(data.prediction, pred.prediction)
         # check make relationship with log
         self.assertEqual(data.log.log_text, SAMPLE_TEXT)
 
@@ -176,15 +179,19 @@ class QuestionTypeModelTest(_Base):
 
     def test_question_model_save_and_query(self):
         test = 'test type'
-        QuestionType(type=test).save()
+        qt = QuestionType(type=test)
+        qt.save()
 
         data = QuestionType.query().filter_by(type=test).first()
         self.assertEqual(data.type, test)
+        self.assertEqual(data.type, qt.type)
         init_size = QuestionType.query().count()
 
         # not saved model which violated unique constraints
         error_model = QuestionType(type=test)
-        error_model.save()
+        with self.assertLogs(level=logging.ERROR):
+            error_model.save()
+
         self.assertEqual(
             QuestionType.query().count(),
             init_size
