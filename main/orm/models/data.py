@@ -17,12 +17,23 @@ class Image(BaseMixin, Base):
     filename = Column(String(64), nullable=False)
     # image is processed and stored as numpy array
     processed = Column(Boolean, nullable=False, default=False)
+    original = Column(String(64), nullable=True)
     saved_at = Column(DateTime, default=datetime.utcnow())
+
+    def __init__(self, filename):
+        # add other file formats
+        if not (filename.endswith('.jpg') or filename.endswith('.png')):
+            raise ValueError('Invalid file. '
+                             'Make sure extention is included in file name '
+                             'and file is either `.jpg` or `.png`')
+        # accept only filename as input
+        super(Image, self).__init__(filename=filename)
 
     def update(self):
         """Execute once processed original data."""
         # replace name with id
         _, ext = os.path.splitext(self.filename)
+        self.original = self.filename
         self.filename = f'{self.id:05d}{ext}'
         self.processed = True
         self.save()

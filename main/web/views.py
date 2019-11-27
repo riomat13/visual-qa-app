@@ -13,6 +13,7 @@ from main.web.forms import QuestionForm
 from main.web.auth import verify_user, login_required
 from main.models.client import run_model
 from main.orm.models.web import Note, Citation
+from main.orm.models.data import Image, Question
 
 
 @base.route('/')
@@ -59,7 +60,7 @@ def prediction():
     form = QuestionForm()
 
     if request.method == 'POST':
-        # if submitted to preduct
+        # if submitted to predict
         if form.validate_on_submit():
             question = form.question.data
             form.question.data = ''
@@ -68,6 +69,7 @@ def prediction():
                 flash('Image is not provided')
                 return redirect(url_for('base.prediction'))
 
+            Question(question=question).save()
             path = os.path.join(Config.UPLOAD_DIR, filename)
             pred = asyncio.run(run_model(path, question))
 
@@ -77,6 +79,7 @@ def prediction():
             f = request.files['file']
             # save a file to be saved safely in file system
             filename = secure_filename(f.filename)
+            Image(filename=filename).save()
             
             if not filename:
                 return redirect(url_for('base.prediction'))

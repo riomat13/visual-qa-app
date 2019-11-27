@@ -89,7 +89,8 @@ class GeneralBaseViewResponseTest(_Base):
 
 class PredictionTest(_Base):
 
-    def test_upload_image(self):
+    @patch('main.web.views.Image.save')
+    def test_upload_image(self, mock_img_save):
         # store image data into buffer temporarily
         test_data = io.BytesIO(b'test data')
         response = self.client.post(
@@ -101,10 +102,12 @@ class PredictionTest(_Base):
             )
         )
         self.assertEqual(response.status_code, 200)
+        mock_img_save.assert_called_once()
 
+    @patch('main.web.views.Question.save')
     @patch('main.web.views.run_model')
     @patch('main.web.views.asyncio.run')
-    def test_return_with_prediction(self, mock_run, mock_run_model):
+    def test_return_with_prediction(self, mock_run, mock_run_model, mock_q_save):
         test_sent = 'this is test sentence'
         # mock prediction result
         mock_run.return_value = test_sent
@@ -135,6 +138,7 @@ class PredictionTest(_Base):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn(test_sent, response.data.decode())
+        mock_q_save.assert_called_once()
 
 
 class NoteViewTest(_Base):
@@ -156,7 +160,6 @@ class NoteViewTest(_Base):
 
         self.assertIn(b'test_notes', response.data)
         self.assertIn(b'test_refs', response.data)
-
 
 if __name__ == '__main__':
     unittest.main()

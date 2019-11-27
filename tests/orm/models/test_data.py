@@ -28,13 +28,17 @@ class ImageModelTest(_Base):
         img = Image(filename=fname)
         img.save()
 
-        data = Image.query().filter_by(filename=fname).first()
-        data.update()
+        # before update, no data is stored
+        self.assertIsNone(img.original)
 
-        target = f'{id_:05d}.jpg'
+        img.update()
 
-        self.assertNotEqual(data.filename, fname)
-        self.assertEqual(data.filename, target)
+        target = f'{img.id:05d}.jpg'
+
+        self.assertNotEqual(img.filename, fname)
+        self.assertEqual(img.filename, target)
+        # save original filename
+        self.assertEqual(img.original, fname)
 
 
 class QuestionModelTest(_Base):
