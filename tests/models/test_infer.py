@@ -16,7 +16,6 @@ import numpy as np
 from main.settings import Config
 from main.utils.loader import fetch_question_types
 from main.utils.preprocess import text_processor
-from main.models.infer import num_classes
 from main.models.infer import (
     _get_q_type_model,
     _get_y_n_model,
@@ -66,14 +65,14 @@ class PredictionModelTest(unittest.TestCase):
         sequence = np.array([[1, 2, 3]])
         model._processor.return_value = sequence
         # this will be considered as yes/no type
-        mock_qtype.return_value = 2
+        mock_qtype.return_value = 0
         target = 'test'
-        mock_y_n.return_value = (target, None)
+        mock_y_n.return_value = ([0], None)
 
         res, w = model.predict('test', '')
         mock_qtype.assert_called_once_with(sequence)
         mock_y_n.assert_called_once_with(sequence, '')
-        self.assertEqual(res, target)
+        self.assertEqual(res, 'yes')
         # yes/no does not return weights
         self.assertIsNone(w)
 
@@ -89,13 +88,13 @@ class PredictQuestionTypeTest(unittest.TestCase):
         model = _get_q_type_model()
         pred = model.predict(seq)
 
-        # result is score of softmax with 81 classes
-        self.assertEqual(pred.shape, (1, num_classes))
+        # result is score of softmax with 9 classes
+        self.assertEqual(pred.shape, (1, 9))
 
     def test_predict_by_function(self):
         seq = np.random.randint(1, 100, (1, 10))
         pred = predict_question_type(seq)
-        self.assertTrue(0 <= pred < num_classes)
+        self.assertTrue(0 <= pred < 9)
 
 
 class PredictYesNoTest(unittest.TestCase):
@@ -124,7 +123,7 @@ class ConvertResultTest(unittest.TestCase):
 
     def test_handle_invalid_inputs(self):
         test_cases = [
-            np.zeros((10,)),
+            np.zeros((1, 3, 3, 3)),
             np.zeros((10, 5, 3))
         ]
 
