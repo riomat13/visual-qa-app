@@ -26,10 +26,12 @@ def index():
 
 @base.route('/login', methods=['GET', 'POST'])
 def login():
+    form = UserForm()
     if request.method == 'POST':
-        username = request.form['username']
-        email = request.form['email']
-        password = request.form['password']
+        if form.validate_on_submit():
+            username = form.username.data
+            email = form.email.data
+            password = form.password.data
 
         if not verify_user(username, password, email=email):
             # if not valid user
@@ -43,7 +45,7 @@ def login():
         session['user_id'] = user.id
         return redirect(url_for('base.index'))
 
-    return render_template('login.html')
+    return render_template('login.html', form=form)
 
 
 @base.route('/logout')

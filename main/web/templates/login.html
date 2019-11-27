@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% block title %} - login{% endblock title %}
+{% block content %}
+<div id="login-form" class="form-group">
+  <form method="POST">
+    {{ form.hidden_tag() }}
+    <div class="row form-row">
+      <div class="col-25">
+        {{ form.username.label(class_="form-label") }}
+      </div>
+      <div class="col-75">
+        {{ form.username(class_="form-input") }}
+      </div>
+    </div>
+    <div class="row form-row">
+      <div class="col-25">
+        {{ form.email.label(class_="form-label") }}
+      </div>
+      <div class="col-75">
+        {{ form.email(class_="form-input") }}
+      </div>
+    </div>
+    <div class="row form-row">
+      <div class="col-25">
+        {{ form.password.label(class_="form-label") }}
+      </div>
+      <div class="col-75">
+        {{ form.password(class_="form-input") }}
+      </div>
+    </div>
+    <dic class="row form-row">
+      {{ form.submit(id="login-submit", class_="btn btn-md btn-success") }}
+    </dic>
+  </form>
+</div>
+{% endblock content %}
