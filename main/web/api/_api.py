@@ -73,7 +73,7 @@ def get_model_info(model_id):
     if authorization is None or not verify_user(**authorization):
         abort(403)
 
-    model = MLModel.query().filter_by(id=model_id).first()
+    model = MLModel.get(model_id)
     if model is None:
         data = {}
     else:

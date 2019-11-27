@@ -32,7 +32,7 @@ class BaseMixin(object):
     @classmethod
     def get(cls, id):
         """Pass id and return corresponding model instance."""
-        return cls.query.get(id)
+        return cls.query().get(id)
 
     @provide_session
     def save(self, *, autoflush=True, session=None):

@@ -36,11 +36,11 @@ class _Base(unittest.TestCase):
 
 
 class BaseMixinTest(_Base):
-    
-    def test_save_and_get_data(self):
+
+    def setUp(self):
+        super(BaseMixinTest, self).setUp()
         # model count before save data
         init_size = MLModel.query().count()
-
         m = MLModel(name='test',
                     type='cls',
                     category='test',
@@ -52,8 +52,12 @@ class BaseMixinTest(_Base):
         size = MLModel.query().count()
         self.assertEqual(size - init_size, 1)
 
+    
+    def test_save_and_delete_data(self):
+        init_size = MLModel.query().count()
+
         # take data under the current session
-        m = MLModel.query().first()
+        m = MLModel.query().filter_by(name='test').first()
 
         try:
             jsonify(m.to_dict())
@@ -62,7 +66,17 @@ class BaseMixinTest(_Base):
 
         m.delete()
         size = MLModel.query().count()
-        self.assertEqual(size, init_size)
+        self.assertEqual(size, init_size - 1)
+
+    def test_get_data(self):
+        target = MLModel.query().filter_by(name='test').first()
+
+        id_ = target.id
+
+        m = MLModel.get(id_)
+        self.assertEqual(m.id, target.id)
+        self.assertEqual(m.name, target.name)
+
 
 
 if __name__ == '__main__':
