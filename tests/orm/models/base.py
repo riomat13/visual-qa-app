@@ -9,9 +9,6 @@ set_config('test')
 from main.web.app import create_app
 from main.orm.db import Base, session_builder
 
-Session = None
-session = None
-
 
 class _Base(unittest.TestCase):
 

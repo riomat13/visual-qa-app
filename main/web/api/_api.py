@@ -7,7 +7,7 @@ import asyncio
 from flask import abort, jsonify, request, session
 
 from . import api
-from main.orm.models.ml import MLModel, RequestLog, PredictionScore
+from main.orm.models.ml import MLModel, RequestLog, PredictionScore, QuestionType
 from main.models.client import run_model
 from main.web.auth import verify_user
 
@@ -107,7 +107,7 @@ def extract_requests_logs():
 
     if request.method == 'POST':
         q_type = request.values.get('question_type')
-        logs = logs.filter_by(question_type=q_type)
+        logs = logs.filter(RequestLog.question_type.has(type=q_type))
 
     response = jsonify([log.to_dict() for log in logs.all()])
     response.status_code = 200
@@ -124,7 +124,9 @@ def extract_prediction_logs():
 
     if request.method == 'POST':
         q_type = request.values.get('question_type')
-        scores = scores.filter(PredictionScore.log.has(question_type=q_type))
+        scores = scores.outerjoin(PredictionScore.log).filter(
+            RequestLog.question_type.has(type=q_type)
+        )
     response = jsonify([
         {
             'rate': log.rate,

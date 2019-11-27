@@ -16,7 +16,8 @@ set_config('test')
 from main.web.app import create_app
 from main.orm.db import Base, engine
 from main.orm.models.base import User
-from main.orm.models.ml import RequestLog, MLModel, PredictionScore
+from main.orm.models.ml import RequestLog, MLModel, PredictionScore, QuestionType
+from main.orm.models.data import Image, Question
 
 logging.disable(logging.CRITICAL)
 
@@ -209,7 +210,7 @@ class ExtractRequestLogsTest(_Base):
         mock_all.return_value = [model] * size
         mock_filter = Mock()
         mock_filter.return_value.all = mock_all
-        mock_query.return_value.filter_by = mock_filter
+        mock_query.return_value.filter = mock_filter
 
         # TODO: filter by question type
         response = self.client.post('/api/logs/requests',
@@ -222,14 +223,57 @@ class ExtractRequestLogsTest(_Base):
         for log in data:
             self.assertEqual(log.get('key'), 'value')
 
-        mock_filter.assert_called_once_with(question_type='test')
-
     def test_extract_non_registered_logs(self):
         res = self.client.post('/api/logs/requests',
                                data=dict(question_type='test'))
         self.assertEqual(res.status_code, 200)
         # should return empty
         self.assertEqual(len(res.json), 0)
+
+    def test_extract_actual_logs(self):
+        size = 5
+        target_size = 3
+
+        target_type = 'question_type'
+        base_filename = 'img{}.jpg'
+        QuestionType(type=target_type).save()
+        QuestionType(type='dummy').save()
+
+        target_qtype = QuestionType.query() \
+            .filter_by(type=target_type) \
+            .first()
+        dummy_qtype = QuestionType.query() \
+            .filter_by(type='dummy') \
+            .first()
+
+        for i in range(size):
+            Image(filename=base_filename.format(i)).save()
+            Question(question='test question').save()
+
+        img = Image.query().first()
+        question = Question.query().first()
+
+        for i in range(target_size):
+            RequestLog(question_type=target_qtype,
+                       question=question,
+                       image=img,
+                       log_type='test',
+                       log_text=f'this is test {i}').save()
+
+        # append type which should be filtered out
+        for i in range(size - target_size):
+            RequestLog(question_type=dummy_qtype,
+                       question=question,
+                       image=img,
+                       log_type='test',
+                       log_text=f'this is dummy {i}').save()
+
+        response = self.client.post(
+            '/api/logs/requests',
+            data=dict(question_type=target_type)
+        )
+        data = response.json
+        self.assertEqual(len(data), target_size)
 
 
 class ExtractPredictionScoreLogsTest(_Base):
@@ -269,36 +313,45 @@ class ExtractPredictionScoreLogsTest(_Base):
             self.assertEqual(log.get('prediction'), 'test')
 
     def test_extract_scores_by_question_type(self):
-        size = 4
-        target_size = 2
+        size = 5
+        target_size = 3
 
-        target = []
         target_type = 'question_type'
-        qtypes = []
+        base_filename = 'img{}.jpg'
+        QuestionType(type=target_type).save()
+        QuestionType(type='dummy').save()
 
-        # append target type to filter
-        for _ in range(target_size):
-            qtypes.append(target_type)
-
-        # append type which should be filtered out
-        for _ in range(size - target_size):
-            qtypes.append('invalid')
+        target_qtype = QuestionType.query() \
+            .filter_by(type=target_type) \
+            .first()
+        dummy_qtype = QuestionType.query() \
+            .filter_by(type='dummy') \
+            .first()
 
         for i in range(size):
-            log = RequestLog(filename='testfile',
-                             question_type=qtypes[i],
-                             question='test',
-                             log_type='test',
-                             log_text='this is test')
-            log.save()
+            Image(filename=base_filename.format(i)).save()
+            Question(question='test question').save()
 
-            pred_data = PredictionScore(rate=1,
-                                        prediction='test',
-                                        probability=0.4,
-                                        answer='test',
-                                        log_id=i+1,
-                                        log=log)
-            pred_data.save()
+        img = Image.query().first()
+        question = Question.query().first()
+
+        for i in range(target_size):
+            RequestLog(question_type=target_qtype,
+                       question=question,
+                       image=img,
+                       log_type='test',
+                       log_text=f'this is test {i}').save()
+
+        # append type which should be filtered out
+        for i in range(size - target_size):
+            RequestLog(question_type=dummy_qtype,
+                       question=question,
+                       image=img,
+                       log_type='test',
+                       log_text=f'this is dummy {i}').save()
+
+        for log in RequestLog.query().all():
+            PredictionScore(log=log, prediction='pred').save()
 
         # send request and extract data
         response = self.client.post(
@@ -312,4 +365,4 @@ class ExtractPredictionScoreLogsTest(_Base):
         self.assertEqual(len(data), target_size)
 
         for log in data:
-            self.assertEqual(log.get('prediction'), 'test')
+            self.assertEqual(log.get('prediction'), 'pred')

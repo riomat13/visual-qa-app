@@ -106,15 +106,28 @@ class RequestLog(ModelLogMixin, BaseMixin, Base):
     """Logs when got request to predict."""
     __tablename__ = 'request_log'
 
-    # file name to be used for prediction
-    filename = Column(String(64), nullable=False)
-    # question about image
-    question_type = Column(String(32), nullable=False)
-    question = Column(String(128), nullable=False)
-
     # TODO: uncomment after store model data to db
     #model_id = Column(Integer, ForeignKey('prediction_model.id'))
     #model = relationship('PredictionModel')
+
+    question_type_id = Column(Integer, ForeignKey('question_type.id'))
+    question_type = relationship('QuestionType')
+
+    question_id = Column(Integer, ForeignKey('question.id'))
+    question = relationship('Question')
+
+    # image name
+    image_id = Column(Integer, ForeignKey('image.id'))
+    image = relationship('Image')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'log_type': self.log_type,
+            'log_text': self.log_text,
+            'question_type_id': self.question_type_id,
+            'image_id': self.image_id,
+        }
 
 
 class PredictionScore(BaseMixin, Base):
@@ -127,7 +140,7 @@ class PredictionScore(BaseMixin, Base):
     prediction = Column(String(128), nullable=False)
     # likelihood probability for the answer
     # TODO: should not be nullable
-    probability = Column(Float)
+    probability = Column(Float, nullable=True)
     # ideal answer (optional)
     answer = Column(String(128), nullable=True)
 
@@ -164,3 +177,14 @@ class PredictionScore(BaseMixin, Base):
         self.question_type = question_type
         self.answer = answer
         self.save()
+
+
+class QuestionType(BaseMixin, Base):
+    __tablename__ = 'question_type'
+
+    type = Column(String(64), unique=True, nullable=False)
+
+    @classmethod
+    def register(cls, type):
+        """Shortcut to register new question type."""
+        cls(type=type).save()
