@@ -18,40 +18,40 @@ from main.orm.db import Base, engine
 from main.orm.models.base import User
 from main.orm.models.ml import RequestLog, MLModel, PredictionScore, QuestionType
 from main.orm.models.data import Image, Question
+from main.orm.models.web import Update, Citation
 
 logging.disable(logging.CRITICAL)
 
 
 class _Base(unittest.TestCase):
 
-    @classmethod
-    def setUpClass(cls):
+    def setUp(self):
         app = create_app('test')
-        cls.app_context = app.app_context()
-        cls.app_context.push()
-        client = app.test_client()
-
-        # add authentication
-        headers = {
-            'Authorization': _basic_auth_str('test', 'pwd')
-        }
-        client.get = partial(client.get, headers=headers)
-        client.post = partial(client.post, headers=headers)
-        cls.client = client
+        self.app_context = app.app_context()
+        self.app_context.push()
 
         from main.orm.db import engine
-        cls.engine = engine
+        self.engine = engine
         Base.metadata.create_all(engine)
 
-        user = User(username='test',
+        user = User(username='testcase',
                     email='test@example.com',
                     password='pwd')
         user.save()
 
-    @classmethod
-    def tearDownClass(cls):
-        Base.metadata.drop_all(cls.engine)
-        cls.app_context.pop()
+        # add authentication
+        headers = {
+            'Authorization': _basic_auth_str('testcase', 'pwd')
+        }
+
+        client = app.test_client()
+        client.get = partial(client.get, headers=headers)
+        client.post = partial(client.post, headers=headers)
+        self.client = client
+
+    def tearDown(self):
+        self.app_context.pop()
+        Base.metadata.drop_all(self.engine)
 
 
 class ModelListTest(_Base):
@@ -72,7 +72,7 @@ class ModelListTest(_Base):
 
         self.assertEqual(response.status_code, 200)
 
-        json_data = response.json
+        json_data = response.json.get('data')
 
         self.assertEqual(len(json_data), 4)
         
@@ -103,6 +103,8 @@ class ModelListTest(_Base):
         )
 
         self.assertEqual(res.status_code, 400)
+        # not successed process
+        self.assertFalse(res.json.get('done'))
         self.assertTrue('error' in res.json)
 
         res = self.client.post(
@@ -128,12 +130,14 @@ class ModelListTest(_Base):
 
         data = MLModel.query().filter_by(name=model_name).first()
         res = self.client.get(f'/api/model/{data.id}')
-        self.assertEqual(res.json.get('name'), model_name)
+        data = res.json.get('data')
+        self.assertEqual(data.get('name'), model_name)
 
         # test with non-exist id
         res = self.client.get(f'/api/model/1000')
+        data = res.json.get('data')
         # this must be empty
-        self.assertEqual(len(res.json), 0)
+        self.assertEqual(len(data), 0)
 
 
 class QuestionTypeTest(_Base):
@@ -170,10 +174,10 @@ class QuestionTypeTest(_Base):
         response = self.client.post('/api/predict/question_type',
                                     data=dict(question='invalid'))
 
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 400)
 
         data = response.json
-        self.assertTrue('error' in data)
+        self.assertTrue('message' in data)
 
 
 class ExtractRequestLogsTest(_Base):
@@ -192,7 +196,7 @@ class ExtractRequestLogsTest(_Base):
         # TODO: filter by question type
         response = self.client.get('/api/logs/requests')
         self.assertEqual(response.status_code, 200)
-        data = response.json
+        data = response.json.get('data')
 
         self.assertEqual(len(data), size)
 
@@ -216,7 +220,7 @@ class ExtractRequestLogsTest(_Base):
         response = self.client.post('/api/logs/requests',
                                     data=dict(question_type='test'))
         self.assertEqual(response.status_code, 200)
-        data = response.json
+        data = response.json.get('data')
 
         self.assertEqual(len(data), size)
 
@@ -228,7 +232,7 @@ class ExtractRequestLogsTest(_Base):
                                data=dict(question_type='test'))
         self.assertEqual(res.status_code, 200)
         # should return empty
-        self.assertEqual(len(res.json), 0)
+        self.assertEqual(len(res.json.get('data')), 0)
 
     def test_extract_actual_logs(self):
         size = 5
@@ -264,15 +268,11 @@ class ExtractRequestLogsTest(_Base):
             '/api/logs/requests',
             data=dict(question_type=target_type)
         )
-        data = response.json
+        data = response.json.get('data')
         self.assertEqual(len(data), target_size)
 
 
 class ExtractPredictionScoreLogsTest(_Base):
-
-    def setUp(self):
-        super(ExtractPredictionScoreLogsTest, self).setUp()
-
 
     @patch('main.web.api._api.PredictionScore.query')
     def test_extract_all_scores(self, mock_query):
@@ -297,7 +297,7 @@ class ExtractPredictionScoreLogsTest(_Base):
         # send request and extract data
         response = self.client.get('/api/logs/predictions')
         self.assertEqual(response.status_code, 200)
-        data = response.json
+        data = response.json.get('data')
 
         self.assertEqual(len(data), size)
 
@@ -344,9 +344,87 @@ class ExtractPredictionScoreLogsTest(_Base):
         )
 
         self.assertEqual(response.status_code, 200)
-        data = response.json
+        self.assertTrue(response.json.get('done'))
+        data = response.json.get('data')
 
         self.assertEqual(len(data), target_size)
 
         for log in data:
             self.assertEqual(log.get('prediction'), 'pred')
+
+
+class UpdateItemTest(_Base):
+
+    def test_extract_update_list(self):
+        size = 4
+        for i in range(size):
+            Update(content=f'test {i}').save()
+
+        res = self.client.get('/api/updates/all')
+        self.assertEqual(res.status_code, 200)
+        self.assertTrue(res.json.get('done'))
+        data = res.json.get('data')
+        self.assertEqual(len(data), size)
+
+    def test_register_new_update(self):
+        size = 4
+        for i in range(4):
+            with self.subTest(i=i):
+                res = self.client.post(
+                    '/api/update/register',
+                    data=dict(content=f'test {i}')
+                )
+                self.assertEqual(res.status_code, 200)
+                self.assertTrue(res.json.get('done'))
+
+        self.assertEqual(Update.query().count(), size)
+
+    def test_fail_to_register_update(self):
+        res = self.client.post(
+            '/api/update/register',
+            data={},
+        )
+        self.assertEqual(res.status_code, 400)
+        self.assertIn('error', res.json)
+
+
+class CitationItemTest(_Base):
+
+    def test_extract_references(self):
+        size = 4
+        for i in range(size):
+            Citation(author='tester',
+                     title=f'test {i}',
+                     year=1990+i).save()
+
+        res = self.client.get('/api/references/all')
+        self.assertEqual(res.status_code, 200)
+        self.assertTrue(res.json.get('done'))
+        data = res.json.get('data')
+        self.assertEqual(len(data), size)
+
+    def test_register_new_citation(self):
+        size = 4
+        for i in range(4):
+            with self.subTest(i=i):
+                res = self.client.post(
+                    '/api/reference/register',
+                    data=dict(author='tester',
+                              title=f'test {i}')
+                )
+                self.assertEqual(res.status_code, 200)
+                self.assertTrue(res.json.get('done'))
+
+        self.assertEqual(Citation.query().count(), size)
+
+    def test_fail_to_register_citation(self):
+        res = self.client.post(
+            '/api/reference/register',
+            data=dict(author='tester'),
+        )
+        self.assertEqual(res.status_code, 400)
+        self.assertIn('error', res.json)
+
+
+if __name__ == '__main__':
+    unittest.main()

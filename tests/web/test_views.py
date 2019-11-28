@@ -22,7 +22,7 @@ logging.disable(logging.CRITICAL)
 
 
 admin = {
-    'username': 'test',
+    'username': 'testcase',
     'email': 'test@example.com',
     'password': 'pwd',
 }

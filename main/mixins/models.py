@@ -44,7 +44,9 @@ class BaseMixin(object):
         except sqlalchemy.exc.IntegrityError as e:
             log.error(e)
             session.rollback()
+            raise
         except Exception as e:
+            log.error(e)
             session.rollback()
             raise
 
