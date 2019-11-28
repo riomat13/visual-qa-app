@@ -10,11 +10,21 @@
   <title>Visual Question Answering App{% block title %}{% endblock title %}</title>
   <body>
     <div class="navbar">
-        <ul>
-            <li><a class="{% if active == 'home' %}active{% endif %}" href="{{ url_for('base.index') }}">Home</a></li>
-            <li><a class="{% if active == 'prediction' %}active{% endif %}" href="{{ url_for('base.prediction') }}">Prediction</a></li>
-            <li><a class="{% if active == 'note' %}active{% endif %}" href="{{ url_for('base.note') }}">Note</a></li>
-        </ul>
+      <a class="{% if active == 'home' %}active{% endif %}" href="{{ url_for('base.index') }}">Home</a>
+      <a class="{% if active == 'prediction' %}active{% endif %}" href="{{ url_for('base.prediction') }}">Prediction</a>
+      <a class="{% if active == 'note' %}active{% endif %}" href="{{ url_for('base.note') }}">Note</a>
+      {% if g.user %}
+        <div class="login-menu">
+          <div class="login-menu-user">
+            <a class="login-user-tag">@{{ g.user.username }}</a>
+          </div>
+          <div class="login-menu-content">
+            <a href="{{ url_for('base.update_register') }}">Updates</a>
+            <a href="{{ url_for('base.ref_register') }}">References</a>
+            <a href="{{ url_for('base.logout') }}">Logout</a>
+          </div>
+        </div>
+      {% endif %}
     </div>
     <div class="container">
       {% block content %}{% endblock content %}
