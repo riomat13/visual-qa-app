@@ -78,6 +78,5 @@ class BaseMixinTest(_Base):
         self.assertEqual(m.name, target.name)
 
 
-
 if __name__ == '__main__':
     unittest.main()

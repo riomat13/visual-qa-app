@@ -40,16 +40,31 @@ class ImageModelTest(_Base):
         # save original filename
         self.assertEqual(img.original, fname)
 
+    def test_upload_invalid_file(self):
+        with self.assertRaises(ValueError):
+            img = Image(filename='invalid.txt')
+            img.save()
+
 
 class QuestionModelTest(_Base):
 
     def test_question_model_save_and_extract(self):
         question = 'is this question'
-        Question(question=question).save()
+        q = Question(question=question)
+        q.save()
 
-        data = Question.query().filter_by(question=question).first()
-
+        data = Question.get(q.id)
         self.assertEqual(data.question, question)
+
+    def test_update_model_state(self):
+        question = 'is this question'
+        q = Question(question=question)
+        q.save()
+
+        data = Question.get(q.id)
+        self.assertFalse(data.updated)
+        data.update()
+        self.assertTrue(data.updated)
 
 
 if __name__ == '__main__':

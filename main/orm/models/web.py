@@ -16,7 +16,7 @@ class Update(BaseMixin, Base):
     __tablename__ = 'update'
 
     content = Column(String(256), nullable=False)
-    update = Column(DateTime, default=datetime.utcnow())
+    update_at = Column(DateTime, default=datetime.utcnow())
 
 
 class Citation(BaseMixin, Base):

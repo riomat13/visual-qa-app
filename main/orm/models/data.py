@@ -19,15 +19,16 @@ class Image(BaseMixin, Base):
     processed = Column(Boolean, nullable=False, default=False)
     original = Column(String(64), nullable=True)
     saved_at = Column(DateTime, default=datetime.utcnow())
+    request_log = relationship('RequestLog')
 
-    def __init__(self, filename):
+    def __init__(self, filename, saved_at=None):
         # add other file formats
         if not (filename.endswith('.jpg') or filename.endswith('.png')):
             raise ValueError('Invalid file. '
                              'Make sure extention is included in file name '
                              'and file is either `.jpg` or `.png`')
         # accept only filename as input
-        super(Image, self).__init__(filename=filename)
+        super(Image, self).__init__(filename=filename, saved_at=saved_at)
 
     def update(self):
         """Execute once processed original data."""
@@ -45,7 +46,9 @@ class Question(BaseMixin, Base):
     question = Column(String(256), nullable=False)
 
     type_id = Column(Integer, ForeignKey('question_type.id'))
-    type = relationship('QuestionType')
+    type = relationship('QuestionType', back_populates='question')
+
+    request_log = relationship('RequestLog')
 
     # this is a flag to check if set type is correct
     # initially type is set as predicted one

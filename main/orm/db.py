@@ -13,12 +13,14 @@ Session = None
 Base = declarative_base()
 
 
-def session_builder():
+def session_builder(*, Config=None):
     global engine
     global Session
 
     if engine is None:
-        from main.settings import Config
+        if Config is None:
+            from main.settings import Config
+
         engine_uri = Config.DATABASE_URI
         engine = create_engine(engine_uri)
 

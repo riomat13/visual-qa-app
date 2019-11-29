@@ -26,12 +26,19 @@ class MLModelTest(_Base):
 
     def test_model_type_save_and_query(self):
         model_name = 'test_model'
+        with self.assertRaises(ModuleNotFoundError):
+            model = MLModel(name=model_name,
+                            type='cls',
+                            category='test',
+                            module='invalid_module',
+                            object='Class')
+            model.save()
+
         model = MLModel(name=model_name,
                         type='cls',
                         category='question_type',
                         module='main.models',
                         object='Class')
-
         model.save()
 
         data = MLModel.query().first()
@@ -48,7 +55,7 @@ class MLModelTest(_Base):
                         object='Class')
         model.save()
 
-        data = MLModel.query().filter_by(name=model_name).first()
+        data = MLModel.get(model.id)
         self.assertEqual(data.type, 'classification')
 
     def test_check_unique_name_with_handling_error(self):
@@ -67,11 +74,20 @@ class MLModelTest(_Base):
                          module='main.models',
                          object='Class')
 
-        with self.assertLogs(level=logging.ERROR):
-            model2.save()
+        with self.assertRaises(Exception):
+            with self.assertLogs(level=logging.ERROR):
+                model2.save()
 
         data = MLModel.query().filter_by(name=model_name).first()
         self.assertEqual(data.category, cat)
+
+        with self.assertRaises(ValueError):
+            MLModel(name='invalid_type',
+                    type='incalid',
+                    category=cat,
+                    module='main.models',
+                    object='Class')
+
 
     def test_update_score_data(self):
         new_score = 0.68
@@ -118,17 +134,20 @@ class RequestLogTest(_Base):
         self.qtype = QuestionType(type='testcase')
         self.qtype.save()
 
-        self.question = Question(question='is this test')
-        self.question.save()
+        q = Question(question='is this test')
+        q.save()
+        self.question_id = q.id
 
-        self.img = Image(filename='test.jpg')
-        self.img.save()
+        img = Image(filename='test.jpg')
+        img.save()
+        self.img_id = img.id
+
 
     def test_model_request_log_saved(self):
         log = RequestLog(
             question_type=self.qtype,
-            question=self.question,
-            image=self.img,
+            question_id=self.question_id,
+            image_id=self.img_id,
             log_type='success',
             log_text=SAMPLE_TEXT)
 
@@ -137,6 +156,27 @@ class RequestLogTest(_Base):
         data = RequestLog.query().first()
 
         self.assertEqual(data.log_text, SAMPLE_TEXT)
+
+    def test_serialize_data_as_dict(self):
+        log = RequestLog(
+            question_type_id=self.qtype.id,
+            question_id=self.question_id,
+            image_id=self.img_id,
+            log_type='success',
+            log_text=SAMPLE_TEXT)
+
+        log.save()
+
+        data = log.to_dict()
+
+        self.assertEqual(data['id'], log.id)
+        self.assertEqual(data['question_type_id'], self.qtype.id)
+        self.assertEqual(data['log_type'], 'success')
+        self.assertEqual(data['log_text'], SAMPLE_TEXT)
+        self.assertEqual(data['image_id'], self.img_id)
+
+        # not stored and check if it can handle empty data
+        self.assertIsNone(data['model_id'])
 
 
 class PredictionScoreTest(_Base):
@@ -147,32 +187,60 @@ class PredictionScoreTest(_Base):
         self.qtype = QuestionType(type='testcase')
         self.qtype.save()
 
-        self.question = Question(question='is this test')
-        self.question.save()
+        q = Question(question='is this test')
+        q.save()
+        self.question_id = q.id
 
-        self.img = Image(filename='test.jpg')
-        self.img.save()
+        img = Image(filename='test.jpg')
+        img.save()
+        self.img_id = img.id
 
-    def test_model_saved_properly(self):
-        test_predict = 'some result'
+        self.test_predict = 'some result'
         log = RequestLog(
             question_type=self.qtype,
-            question=self.question,
-            image=self.img,
+            question_id=self.question_id,
+            image_id=self.img_id,
             log_type='success',
             log_text=SAMPLE_TEXT)
         log.save()
 
-        pred = PredictionScore(prediction=test_predict, log=log, rate=1)
+        pred = PredictionScore(prediction=self.test_predict,
+                               log_id=log.id,
+                               rate=1)
         pred.save()
+        self.id = pred.id
 
-        data = PredictionScore.query().first()
+    def test_model_saved_properly(self):
+        data = PredictionScore.get(self.id)
 
         # check saved properly
-        self.assertEqual(data.prediction, test_predict)
-        self.assertEqual(data.prediction, pred.prediction)
+        self.assertEqual(data.prediction, self.test_predict)
+
         # check make relationship with log
         self.assertEqual(data.log.log_text, SAMPLE_TEXT)
+
+    def test_update_score_information(self):
+        data = PredictionScore.get(self.id)
+
+        with self.assertRaises(ValueError):
+            data.update()
+
+        target = 'validated'
+        data.update(question_type='updated', answer=target)
+
+        new_data = PredictionScore.get(self.id)
+        self.assertEqual(new_data.answer, target)
+
+    def test_handle_out_of_range_rate(self):
+        with self.assertRaises(ValueError):
+            PredictionScore(prediction='invalid',
+                            log_id=1,
+                            rate=10)
+
+        with self.assertRaises(ValueError):
+            PredictionScore(prediction='invalid',
+                            log_id=1,
+                            rate=0)
 
 
 class QuestionTypeModelTest(_Base):
@@ -189,8 +257,9 @@ class QuestionTypeModelTest(_Base):
 
         # not saved model which violated unique constraints
         error_model = QuestionType(type=test)
-        with self.assertLogs(level=logging.ERROR):
-            error_model.save()
+        with self.assertRaises(Exception):
+            with self.assertLogs(level=logging.ERROR):
+                error_model.save()
 
         self.assertEqual(
             QuestionType.query().count(),

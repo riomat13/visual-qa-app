@@ -8,6 +8,7 @@
 #   ModelRequestLog: store logs when requested from api
 #   PredictionScore: store results of predictions for later update
 
+import logging
 from datetime import datetime
 from importlib.util import find_spec
 
@@ -20,6 +21,9 @@ from sqlalchemy.orm import relationship
 from main.orm.db import Base
 from main.orm.types import ChoiceType
 from main.mixins.models import BaseMixin, ModelLogMixin
+from main.orm.models.data import Question, Image
+
+log = logging.getLogger(__name__)
 
 
 class MLModel(BaseMixin, Base):
@@ -49,18 +53,13 @@ class MLModel(BaseMixin, Base):
     metrics = Column(String(32), nullable=True)
     score = Column(Float, nullable=True)
 
-    # TODO: make relationship with scores as one-to-many
-    #predictions = relationship('RequestLog', backref='ml_model')
+    prediction_model = relationship('PredictionModel', back_populates='model')
 
     def __init__(self, name, type, category, module, object,
                  path=None, metrics=None, score=None):
-        if not module:
-            raise ValueError('Empty module is provided')
-        try:
-            find_spec(module)
-        except ModuleNotFoundError:
+        if find_spec(module) is None:
             log.error(f'Invalid module name: {module}')
-            raise
+            raise ModuleNotFoundError(f'Could not find module: {module}')
 
         if type not in ('cls', 'seq', 'enc', 'dec'):
             raise ValueError('Invalid type name')
@@ -81,8 +80,7 @@ class MLModel(BaseMixin, Base):
             score: float
             metrics(optional): str
         """
-        if metrics is not None:
-            self.metrics = metrics
+        self.metrics = metrics
         self.score = score
         self.save()
 
@@ -92,7 +90,9 @@ class PredictionModel(BaseMixin, Base):
     __tablename__ = 'prediction_model'
 
     model_id = Column(Integer, ForeignKey('ml_model.id'))
-    model = relationship('MLModel')
+    model = relationship('MLModel', back_populates='prediction_model')
+
+    log = relationship('RequestLog', back_populates='model')
 
 
 class ModelLog(ModelLogMixin, BaseMixin, Base):
@@ -114,11 +114,12 @@ class RequestLog(ModelLogMixin, BaseMixin, Base):
     question_type = relationship('QuestionType')
 
     question_id = Column(Integer, ForeignKey('question.id'))
-    question = relationship('Question')
-
-    # image name
     image_id = Column(Integer, ForeignKey('image.id'))
-    image = relationship('Image')
+
+    # predicted score and model
+    score = relationship('PredictionScore', back_populates='log')
+    model_id = Column(Integer, ForeignKey('prediction_model.id'))
+    model = relationship('PredictionModel', back_populates='log')
 
     def to_dict(self):
         return {
@@ -127,6 +128,7 @@ class RequestLog(ModelLogMixin, BaseMixin, Base):
             'log_text': self.log_text,
             'question_type_id': self.question_type_id,
             'image_id': self.image_id,
+            'model_id': self.model_id,
         }
 
 
@@ -147,15 +149,15 @@ class PredictionScore(BaseMixin, Base):
     predicted_time = Column(DateTime, default=datetime.utcnow())
 
     log_id = Column(Integer, ForeignKey('request_log.id'))
-    log = relationship('RequestLog')
+    log = relationship('RequestLog', back_populates='score')
 
-    def __init__(self, prediction, log, rate=None, **kwargs):
+    def __init__(self, prediction, log_id, rate=None, **kwargs):
         """Predicted score.
 
         Args:
             prediction: str
                 predicted answer
-            log: RequestLog model
+            log_id: RequestLog model
             rate(optional): int
                 rate the result, 1 - 5
             question_type(optional): str
@@ -168,12 +170,14 @@ class PredictionScore(BaseMixin, Base):
             if not 0 < rate < 6:
                 raise ValueError('Rate must be chosen from 1 to 5')
         super(PredictionScore, self).__init__(prediction=prediction,
-                                              log=log,
+                                              log_id=log_id,
                                               rate=rate,
                                               **kwargs)
 
-    def update(self, question_type, answer):
+    def update(self, *, question_type=None, answer=None):
         """Update information for later label."""
+        if question_type is None and answer is None:
+            raise ValueError('provide question_type and/or answer')
         self.question_type = question_type
         self.answer = answer
         self.save()
@@ -183,6 +187,7 @@ class QuestionType(BaseMixin, Base):
     __tablename__ = 'question_type'
 
     type = Column(String(64), unique=True, nullable=False)
+    question = relationship('Question', back_populates='type')
 
     @classmethod
     def register(cls, type):

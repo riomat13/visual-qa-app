@@ -251,16 +251,16 @@ class ExtractRequestLogsTest(_Base):
 
         for i in range(target_size):
             RequestLog(question_type=target_qtype,
-                       question=question,
-                       image=img,
+                       question_id=question.id,
+                       image_id=img.id,
                        log_type='test',
                        log_text=f'this is test {i}').save()
 
         # append type which should be filtered out
         for i in range(size - target_size):
             RequestLog(question_type=dummy_qtype,
-                       question=question,
-                       image=img,
+                       question_id=question.id,
+                       image_id=img.id,
                        log_type='test',
                        log_text=f'this is dummy {i}').save()
 
@@ -321,21 +321,21 @@ class ExtractPredictionScoreLogsTest(_Base):
 
         for i in range(target_size):
             RequestLog(question_type=target_qtype,
-                       question=question,
-                       image=img,
+                       question_id=question.id,
+                       image_id=img.id,
                        log_type='test',
                        log_text=f'this is test {i}').save()
 
         # append type which should be filtered out
         for i in range(size - target_size):
             RequestLog(question_type=dummy_qtype,
-                       question=question,
-                       image=img,
+                       question_id=question.id,
+                       image_id=img.id,
                        log_type='test',
                        log_text=f'this is dummy {i}').save()
 
         for log in RequestLog.query().all():
-            PredictionScore(log=log, prediction='pred').save()
+            PredictionScore(log_id=log.id, prediction='pred').save()
 
         # send request and extract data
         response = self.client.post(
