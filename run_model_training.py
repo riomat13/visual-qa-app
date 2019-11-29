@@ -95,8 +95,8 @@ def run(model_type, train, val, *,
 
     if save:
         # threshold to save model weights
-        min_loss = 50.0
-        base_path = Config.MODELS.get(model_type)
+        min_loss = 10.0
+        base_path = Config.MODELS.get(model_type).get('path')
         enc_weights_path = os.path.join(base_path, 'encoder', 'weights')
         gen_weights_path = os.path.join(base_path, 'gen', 'weights')
 
@@ -126,6 +126,9 @@ def run(model_type, train, val, *,
 
         random.shuffle(train)
 
+        total_loss = 0
+        count = 0
+
         for batch, (inputs, labels) \
                 in enumerate(data_generator(train, batch_size=batch_size)):
             st = time.time()
@@ -135,6 +138,8 @@ def run(model_type, train, val, *,
             # ============================
             x = np.array([processor.word_index['<bos>']] * len(labels))
             loss, pred, attention_weights = train_seq_step(x, inputs, labels)
+            total_loss += loss
+            count += 1
 
             if batch % display_step == 0:
                 if DEBUG:
@@ -164,6 +169,9 @@ def run(model_type, train, val, *,
                       f'Time(total) - {curr_time-batch_start:.4f}s/batch')
 
             batch_start = time.time()
+
+        total_loss /= count
+        print(f'      Total Loss - {total_loss:.4f}')
 
         # after finished training in each epoch
         # evaluate model by validation dataset
@@ -201,7 +209,7 @@ def run(model_type, train, val, *,
             time.time() - epoch_start))
         print()
 
-        if save and loss_val < min_loss:
+        if save and total_loss < min_loss:
             min_loss = loss_val
             print('Saving model weights')
             encoder.save_weights(enc_weights_path)

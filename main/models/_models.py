@@ -290,16 +290,15 @@ class QuestionAnswerModel(tf.keras.Model):
             pred, attention_weights
         """
         # use hidden as initial input for sequence generator
-        features, _ = self.encoder(qs, imgs)
+        features, q_embedded = self.encoder(qs, imgs)
 
         preds = []
         attention_weights = []
-        prev = x
 
         for i in range(1, self.ans_length):
-            prev, hidden, weight = self.generator(prev, qs, features, hidden)
-            prev = tf.argmax(prev, axis=-1)
-            preds.append(prev)
+            x, hidden, weight = self.generator(x, q_embedded, features, hidden)
+            x = tf.argmax(x, axis=-1)
+            preds.append(x)
             attention_weights.append(weight)
 
         preds = tf.stack(preds, axis=1)
