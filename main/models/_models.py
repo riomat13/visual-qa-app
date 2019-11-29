@@ -153,7 +153,6 @@ class SequenceGeneratorModel(tf.keras.Model):
 
         # apply attention based on input words to get context vector
         # context shape => (None, units)
-        qs = self.embedding(qs)
         context, weights = self.attention(qs, hidden)
         context = tf.expand_dims(context, axis=1)
 
@@ -168,7 +167,7 @@ class SequenceGeneratorModel(tf.keras.Model):
 
 
 class QuestionImageEncoder(tf.keras.Model):
-    """Encode question and image."""
+    """Encode questions and images Model."""
     def __init__(self, units, vocab_size, embedding_dim):
         super(QuestionImageEncoder, self).__init__()
         # questions
@@ -186,21 +185,34 @@ class QuestionImageEncoder(tf.keras.Model):
         self.fc = tf.keras.layers.Dense(units)
 
     def call(self, qs, imgs):
+        """Encoding Question and Image
+
+        Args:
+            qs: question
+                shape: (batch_size, seq_length)
+            imgs: images
+                shape: (batch_size, 49, 1024)
+
+        Return:
+            features: encoded feature represents question and image
+                shape: (batch_size, units)
+            q_embedded: embedded question
+                shape: (batch_size, seq_length, embedding_dim)
+        """
         # questions
-        qs = self.embedding(qs)
-        q_encoded, q_state = self.gru(qs)
+        q_embedded = self.embedding(qs)
+        q_encoded, q_state = self.gru(q_embedded)
 
         # images
-        # encode image data
         # shape => (batch_size, 49(=7x7), embedding_dim)
         img_encoded = imgs
         context_img, _ = self.attention_img(img_encoded, q_state)
 
         # apply attentions to each question sequence and image
-        context_q, weights = self.attention_q(q_encoded, context_img)
+        context_q, _ = self.attention_q(q_encoded, context_img)
         x = tf.concat([context_img, context_q], axis=-1)
         features = self.fc(x)
-        return features, weights
+        return features, q_embedded
 
 
 class QuestionAnswerModel(tf.keras.Model):
@@ -278,16 +290,15 @@ class QuestionAnswerModel(tf.keras.Model):
             pred, attention_weights
         """
         # use hidden as initial input for sequence generator
-        features, _ = self.encoder(qs, imgs)
+        features, q_embedded = self.encoder(qs, imgs)
 
         preds = []
         attention_weights = []
-        prev = x
 
         for i in range(1, self.ans_length):
-            prev, hidden, weight = self.generator(prev, qs, features, hidden)
-            prev = tf.argmax(prev, axis=-1)
-            preds.append(prev)
+            x, hidden, weight = self.generator(x, q_embedded, features, hidden)
+            x = tf.argmax(x, axis=-1)
+            preds.append(x)
             attention_weights.append(weight)
 
         preds = tf.stack(preds, axis=1)

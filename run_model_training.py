@@ -47,23 +47,11 @@ else:
 DEBUG = False
 
 # Train
-vocab_size = 20000
-data_size = 40000
 seq_length = 15
 ans_length = 5 + 2  # maximum answer length + '<bos>' and '<eos>'
 
 embedding_dim = 256
-units = 512
-
 learning_rate = 0.001
-
-batch_size = 128
-epochs = 2
-display_step = 1000
-
-# make easy to calculate accuracy and loss by average
-step_per_val = 30
-val_size = batch_size * step_per_val
 
 
 def data_generator(dataset, batch_size):
@@ -96,13 +84,19 @@ def data_process(dataset):
     return qs, answers, imgs
 
 
-def main(model_type, train, val, *, save=False):
+def run(model_type, train, val, *,
+        units=512,
+        embedding_dim=embedding_dim,
+        vocab_size=20000,
+        learning_rate=learning_rate,
+        sequence_length=ans_length,
+        save=False):
     model_type = model_type.upper()
 
     if save:
         # threshold to save model weights
-        min_loss = 50.0
-        base_path = Config.MODELS.get(model_type)
+        min_loss = 10.0
+        base_path = Config.MODELS.get(model_type).get('path')
         enc_weights_path = os.path.join(base_path, 'encoder', 'weights')
         gen_weights_path = os.path.join(base_path, 'gen', 'weights')
 
@@ -116,12 +110,11 @@ def main(model_type, train, val, *, save=False):
 
     train_seq_step = make_training_seq_model(
         model,
-        ans_length,
+        sequence_length,
         optimizer,
         encoder_model=encoder,
         loss='sparse_categorical_crossentropy'
     )
-
 
     for epoch in range(1, epochs+1):
         epoch_start = time.time()
@@ -133,6 +126,9 @@ def main(model_type, train, val, *, save=False):
 
         random.shuffle(train)
 
+        total_loss = 0
+        count = 0
+
         for batch, (inputs, labels) \
                 in enumerate(data_generator(train, batch_size=batch_size)):
             st = time.time()
@@ -142,6 +138,8 @@ def main(model_type, train, val, *, save=False):
             # ============================
             x = np.array([processor.word_index['<bos>']] * len(labels))
             loss, pred, attention_weights = train_seq_step(x, inputs, labels)
+            total_loss += loss
+            count += 1
 
             if batch % display_step == 0:
                 if DEBUG:
@@ -172,6 +170,9 @@ def main(model_type, train, val, *, save=False):
 
             batch_start = time.time()
 
+        total_loss /= count
+        print(f'      Total Loss - {total_loss:.4f}')
+
         # after finished training in each epoch
         # evaluate model by validation dataset
         st_val = time.time()
@@ -180,14 +181,14 @@ def main(model_type, train, val, *, save=False):
         predicts = []
 
         for in_val, l_val in data_generator(val, batch_size=batch_size):
-            features, _ = encoder(*in_val)
+            features, q_embedded = encoder(*in_val)
             hidden = np.zeros((len(l_val), embedding_dim))
             batch_preds = []
 
             x = np.array([processor.word_index['<bos>']] * len(l_val))
 
             for i in range(1, ans_length):
-                x, hidden, _ = model(x, in_val[0], features, hidden)
+                x, hidden, _ = model(x, q_embedded, features, hidden)
                 cost = tf.keras.losses.sparse_categorical_crossentropy(
                     labels[:, i], x,
                     from_logits=True
@@ -208,7 +209,7 @@ def main(model_type, train, val, *, save=False):
             time.time() - epoch_start))
         print()
 
-        if save and loss_val < min_loss:
+        if save and total_loss < min_loss:
             min_loss = loss_val
             print('Saving model weights')
             encoder.save_weights(enc_weights_path)
@@ -217,8 +218,12 @@ def main(model_type, train, val, *, save=False):
 
 
 if __name__ == '__main__':
-    from main.utils import make_parser
+    from main.utils.parse import make_parser
     parser = make_parser()
+    parser.add_argument(
+        '-m', '--model', type=str, required=True,
+        help='model type to execute, for instnce, "what", "which"'
+    )
 
     args = parser.parse_args()
 
@@ -229,6 +234,13 @@ if __name__ == '__main__':
 
     save = args.no_save
     model_type = args.model.lower()
+
+    batch_size = args.batch
+    epochs = args.epoch
+    units = args.units
+    vocab_size = args.vocab_size
+
+    display_step = args.display_step
 
     if model_type not in ('what', 'where', 'which', 'who', 'why', 'how', 'none'):
         raise ValueError(f'Invalid model type: {model_type}')
@@ -242,15 +254,39 @@ if __name__ == '__main__':
     print('Total loaded data size:', len(dataset))
     random.shuffle(dataset)
 
+    data_size = args.data_size
+    val_size = args.batch * args.val_step
+    if data_size + val_size > len(dataset):
+        raise ValueError('Indicated data size exceeds actual dataset size')
+
     train, val = dataset[:data_size], dataset[data_size: data_size+val_size]
-    print('Data size: Train: {} Val: {}'.format(len(train), len(val)))
+
+    print()
+    print('  Parameters')
+    print('  ----------')
+    print('  Data size:')
+    print(f'      Train: {len(train):>7}')
+    print(f'      Val:   {len(val):>7}')
+    print()
+    print(f'  Epoch:            {epochs}')
+    print(f'  Batch Size:       {batch_size}')
+    print(f'  Hidden unit size: {units}')
+    print(f'  Vocabulary size:  {vocab_size}')
+    print()
 
     # use all words from training set processed primarily
     processor = text_processor(maxlen=seq_length, from_config=True)
     ans_processor = text_processor(maxlen=ans_length, from_config=True)
 
     print('Time to setup: {:.4f}s'.format(time.time() - st))
+    print()
 
-    main(model_type, train, val, save=save)
+    run(model_type, train, val,
+        units=units,
+        embedding_dim=embedding_dim,
+        vocab_size=vocab_size,
+        learning_rate=learning_rate,
+        sequence_length=ans_length,
+        save=save)
     print('Training completed')
     print('Total running time: {:.4f}s'.format(time.time() - st))
