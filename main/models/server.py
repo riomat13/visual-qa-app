@@ -8,6 +8,7 @@ import logging
 from main.utils.preprocess import text_processor
 from main.utils.logger import save_log
 from main.orm.models.ml import PredictionScore, RequestLog
+from main.orm.models.data import Image, Question
 from main.models.infer import predict_question_type, PredictionModel
 
 log = logging.getLogger(__name__)
@@ -18,15 +19,9 @@ predictor = PredictionModel.get_model()
 
 async def save_predict_history(filepath, sentence, pred, log_model):
     # TODO: store results to DB
-    filename = os.path.basename(filepath)
-    score = PredictionScore(filename=filename,
-                            question=sentence,
-                            prediction=pred,
-                            log=log_model)
-    score.save()
+    raise NotImplementedError
 
 
-@save_log(RequestLog)
 async def run_prediction(reader, writer):
     global predictor
     global _processor
@@ -40,29 +35,42 @@ async def run_prediction(reader, writer):
             log.warning('Could not find image')
             pred = 'Could not find image.'
         else:
-            pred, _ = predictor.predict(sentence, filepath)
+            pred, _, qtype_id = predictor.predict(sentence, filepath)
     except Exception as e:
         log.error(e)
         # send error code
         writer.write(b'<e>')
+        log.error('Could not store predict history')
+        kwargs = {
+            'log_text': str(e),
+            'log_type': 'error'
+        }
         raise
     else:
-        pred = pred.encode()
-        writer.write(pred)
+        writer.write(pred.encode())
+        kwargs = {
+            'question_type_id': qtype_id,
+            'log_text': 'success',
+            'log_type': 'success'
+        }
+
     finally:
+        # save the result
+        filename = os.path.basename(filepath)
+        img = Image(filename=filename)
+        img.save()
+        q = Question(question=sentence)
+        q.save()
+        log_model = RequestLog(image_id=img.id,
+                               question_id=q.id,
+                               **kwargs)
+        log_model.save()
+        if kwargs.get('log_type') == 'success':
+            pred_log = PredictionScore(prediction=pred,
+                                       log_id=log_model.id)
+            pred_log.save()
         await writer.drain()
         writer.close()
-
-    filename = os.path.basename(filepath)
-    log_model = RequestLog.query().filter_by(filename=filename).first()
-    if log_model is not None:
-        # save the result
-        await save_predict_history(filepath,
-                                   sentence,
-                                   pred,
-                                   log_model)
-    else:
-        log.error('Could not store predict history')
 
 
 async def run_server(host, port):

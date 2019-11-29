@@ -96,29 +96,43 @@ class PredictionModel(BaseModel):
                 pred = 'Sorry, could not understand the question'
         elif pred_id == 1:
             pred, w = predict_what(sequence, img_path)
+            pred = pred.numpy()[0]
+            log.debug(f'Prediction result: ID: {pred_id} - {str(pred)}')
             pred = convert_output_to_sentence(pred)
         elif pred_id == 2:
             pred, w = predict_what(sequence, img_path)
+            pred = pred.numpy()[0]
+            log.debug(f'Prediction result: ID: {pred_id} - {str(pred)}')
             pred = convert_output_to_sentence(pred)
         elif pred_id == 3:
             pred, w = predict_what(sequence, img_path)
+            pred = pred.numpy()[0]
+            log.debug(f'Prediction result: ID: {pred_id} - {str(pred)}')
             pred = convert_output_to_sentence(pred)
         elif pred_id == 4:
             pred, w = predict_what(sequence, img_path)
+            pred = pred.numpy()[0]
+            log.debug(f'Prediction result: ID: {pred_id} - {str(pred)}')
             pred = convert_output_to_sentence(pred)
         elif pred_id == 5:
             pred, w = predict_what(sequence, img_path)
+            pred = pred.numpy()[0]
+            log.debug(f'Prediction result: ID: {pred_id} - {str(pred)}')
             pred = convert_output_to_sentence(pred)
         elif pred_id == 6:
             pred, w = predict_what(sequence, img_path)
+            pred = pred.numpy()[0]
+            log.debug(f'Prediction result: ID: {pred_id} - {str(pred)}')
             pred = convert_output_to_sentence(pred)
         elif pred_id == 8:
             pred, w = predict_what(sequence, img_path)
+            pred = pred.numpy()[0]
+            log.debug(f'Prediction result: ID: {pred_id} - {str(pred)}')
             pred = convert_output_to_sentence(pred)
         # TODO: add couting model
         if not pred:
             pred = 'Sorry, could not understand the question'
-        return pred, w
+        return pred, w, pred_id
 
     @classmethod
     def get_model(cls):
@@ -292,5 +306,4 @@ def predict_what(sequence, img_path):
     hidden = np.zeros((1, 256))
 
     pred, weights = model(x, sequence, img, hidden)
-    pred = np.argmax(pred, axis=-1)
     return pred, weights
