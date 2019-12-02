@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% set active = 'prediction' %}
 {% block content %}
+<div class="content-group">
 <h2>Prediction</h2>
 <p>Provide an image and submit question.</p>
 <div class="prediction-form">
@@ -33,7 +34,8 @@
   </div>
   {% if prediction %}
   <p>Question: {{ question }}</p>
-  <p>Predicted result: {{ prediction }}</p>
+  <p>Answer: {{ prediction }}</p>
   {% endif %}
+</div>
 </div>
 {% endblock content %}

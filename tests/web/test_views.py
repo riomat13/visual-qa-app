@@ -51,6 +51,11 @@ class _Base(unittest.TestCase):
         Base.metadata.drop_all(self.engine)
         self.app_context.pop()
 
+    def auth_login(self):
+        user = User.query().filter_by(username=admin['username']).first()
+        user.is_admin = True
+        user.save()
+        self.login()
 
     def login(self):
         self.client.post(
@@ -61,6 +66,10 @@ class _Base(unittest.TestCase):
         )
 
     def logout(self):
+        user = User.query().filter_by(username=admin['username']).first()
+        if user.is_admin:
+            user.is_admin = False
+            user.save()
         self.client.get('/logout')
 
     def check_status_code_with_admin(self, path, method='GET', **kwargs):
@@ -203,7 +212,7 @@ class NoteViewTest(_Base):
         mock_update = mock_updates.return_value
         mock_cit = mock_cits.return_value
 
-        mock_updates.return_value.all.return_value = [mock_update]
+        mock_updates.return_value.order_by.return_value.all.return_value = [mock_update]
         mock_cits.return_value.all.return_value = [mock_cit]
 
         mock_update.to_dict.return_value = dict(
@@ -229,6 +238,19 @@ class UpdateFormViewTest(_Base):
 
     def test_update_register_view(self):
         self.check_status_code_with_admin('/update/register')
+
+        self.auth_login()
+        res = self.client.post(
+            '/update/register',
+            data=dict(
+                content='test content',
+                summary='test summary',
+            )
+        )
+        self.assertEqual(res.status_code, 302)
+
+        update = Update.query().filter_by(content='test content').first()
+        self.assertEqual(update.summary, 'test summary')
 
     def test_update_list_all(self):
         content = 'this is a test update'
@@ -285,6 +307,21 @@ class ReferenceFormViewTest(_Base):
 
     def test_reference_register_view(self):
         self.check_status_code_with_admin('/reference/register')
+
+        self.auth_login()
+        res = self.client.post(
+            '/reference/register',
+            data=dict(
+                author='tester',
+                title='test title',
+                year=1990
+            )
+        )
+        self.assertEqual(res.status_code, 302)
+
+        cit = Citation.query().filter_by(author='tester').first()
+        self.assertEqual(cit.title, 'test title')
+        self.assertEqual(cit.year, 1990)
 
     def test_reference_list_all(self):
         author = 'test_author'

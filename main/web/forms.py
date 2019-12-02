@@ -4,7 +4,7 @@
 from flask_wtf import FlaskForm
 from wtforms import (
     Form,
-    StringField, IntegerField, PasswordField,
+    StringField, IntegerField, PasswordField, TextAreaField,
     SubmitField,
     validators
 )
@@ -25,6 +25,7 @@ class QuestionForm(FlaskForm):
 
 class UpdateForm(FlaskForm):
     content = StringField('Content', validators=[DataRequired()])
+    summary = TextAreaField('Summary')
     submit = SubmitField('Submit')
 
 
@@ -33,4 +34,5 @@ class CitationForm(FlaskForm):
     title = StringField('Title', validators=[DataRequired()])
     year = IntegerField('Year')
     url = StringField('URL')
+    summary = TextAreaField('Summary')
     submit = SubmitField('Submit')

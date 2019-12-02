@@ -2,13 +2,13 @@
 {% set active = 'note' %}
 {% block title %} - note{% endblock title %}
 {% block content %}
-<h2>Note</h2>
+<div class="note-group">
 {% if updates %}
 <h3>Update:</h3>
 <div id="update-list">
   <ul>
   {% for line in updates %}
-    <li>({{ line.id }}) {{ line.update_at.strftime('%m/%d/%Y') }} {{ line.content }}</li>
+    <li><span class="number">({{ line.id }})</span> {{ line.update_at.strftime('%m/%d/%Y') }} {{ line.content }}</li>
   {% endfor %}
   </ul>
 </div>
@@ -18,11 +18,12 @@
 <div id="reference-table">
   <ul>
   {% for line in references %}
-    <li>[{{ line.id }}] {{ line.author }}, {{ line.title }}, {{ line.year }} {% if line.url %}[<a href="{{ line.url }}">link</a>]{% endif %}</li>
+    <li><span class="number">[{{ line.id }}]</span> {{ line.author }}, {{ line.title }}, {{ line.year }} {% if line.url %}[<a href="{{ line.url }}">link</a>]{% endif %}</li>
   {% endfor %}
   </ul>
 </div>
 {% else %}
 <p>This page shows update history and references.</p>
 {% endif %}
+</div>
 {% endblock content %}

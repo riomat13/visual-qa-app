@@ -108,7 +108,7 @@ def prediction():
 
 @base.route('/note')
 def note():
-    updates = [update.to_dict() for update in Update.query().all()]
+    updates = [update.to_dict() for update in Update.query().order_by(Update.id.desc()).all()]
     references = [ref.to_dict() for ref in Citation.query().all()]
 
     return render_template('note.html',
@@ -123,7 +123,8 @@ def update_register():
 
     if form.validate_on_submit():
         content = form.content.data
-        Update(content=content).save()
+        summary = form.summary.data
+        Update(content=content, summary=summary).save()
         return redirect(url_for('base.note'))
     return render_template('update_form.html', form=form)
 
@@ -166,7 +167,12 @@ def ref_register():
         title = form.title.data
         year = form.year.data
         url = form.url.data
-        Citation(author=author, name=name, year=year, link=link).save()
+        summary = form.summary.data
+        Citation(author=author,
+                 title=title,
+                 year=year,
+                 url=url,
+                 summary=summary).save()
         return redirect(url_for('base.note'))
     return render_template('citation_form.html', form=form)
 

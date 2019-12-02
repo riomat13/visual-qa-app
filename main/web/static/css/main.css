@@ -85,6 +85,13 @@ input[type="password"] {
   cursor: default;
 }
 
+.container {
+  box-sizing: border-box;
+  margin: 0;
+  height: 100%;
+  width: 100%;
+}
+
 .table-list-items {
   width: 100%;
   border-collapse: collapse;
@@ -155,11 +162,14 @@ input[type="password"] {
   font-size: 0.9rem;
 }
 
-.container {
-  box-sizing: border-box;
-  margin: 0;
-  height: 100%;
-  width: 100%;
+.content-group, .note-group {
+  padding: 16px;
+}
+
+.number {
+  display: inline-block;
+  width: 40px;
+  text-align: right;
 }
 
 .prediction-form {
