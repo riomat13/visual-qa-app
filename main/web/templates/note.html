@@ -3,21 +3,26 @@
 {% block title %} - note{% endblock title %}
 {% block content %}
 <h2>Note</h2>
-<p>This page shows update history and references.</p>
 {% if updates %}
 <h3>Update:</h3>
-<li>
-{% for line in updates %}
-<ul>{{ line }}</ul>
-{% endfor %}
-</li>
+<div id="update-list">
+  <ul>
+  {% for line in updates %}
+    <li>({{ line.id }}) {{ line.update_at.strftime('%m/%d/%Y') }} {{ line.content }}</li>
+  {% endfor %}
+  </ul>
+</div>
 {% endif %}
 {% if references %}
 <h3>Reference:</h3>
-<li>
-{% for line in references %}
-<ul>{{ line }}</ul>
-{% endfor %}
-</li>
+<div id="reference-table">
+  <ul>
+  {% for line in references %}
+    <li>[{{ line.id }}] {{ line.author }}, {{ line.title }}, {{ line.year }} {% if line.url %}[<a href="{{ line.url }}">link</a>]{% endif %}</li>
+  {% endfor %}
+  </ul>
+</div>
+{% else %}
+<p>This page shows update history and references.</p>
 {% endif %}
 {% endblock content %}

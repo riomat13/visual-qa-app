@@ -4,6 +4,7 @@
 import unittest
 from unittest.mock import patch, Mock
 import logging
+from datetime import datetime
 
 from functools import partial
 import io
@@ -98,6 +99,8 @@ class _Base(unittest.TestCase):
         self.logout()
         user.is_admin = False
         user.save()
+
+        return response
 
 
 class GeneralBaseViewResponseTest(_Base):
@@ -196,29 +199,68 @@ class NoteViewTest(_Base):
 
     @patch('main.web.views.Update.query')
     @patch('main.web.views.Citation.query')
-    def test_note_view(self, mock_cits, mock_notes):
-        mock_note = mock_notes.return_value
-        mock_ref = mock_cits.return_value
+    def test_note_view(self, mock_cits, mock_updates):
+        mock_update = mock_updates.return_value
+        mock_cit = mock_cits.return_value
 
-        mock_notes.return_value.all.return_value = [mock_note]
-        mock_cits.return_value.all.return_value = [mock_ref]
+        mock_updates.return_value.all.return_value = [mock_update]
+        mock_cits.return_value.all.return_value = [mock_cit]
 
-        mock_note.to_dict.return_value = 'test_notes'
-        mock_ref.to_dict.return_value = 'test_refs'
+        mock_update.to_dict.return_value = dict(
+            id=1,
+            content='test update',
+            update_at=datetime.utcnow()
+        )
+        mock_cit.to_dict.return_value = dict(
+            id=1,
+            author='tester',
+            title='test title',
+            year=1990,
+        )
 
         response = self.client.get('/note')
         self.assertEqual(response.status_code, 200)
 
-        self.assertIn(b'test_notes', response.data)
-        self.assertIn(b'test_refs', response.data)
+        self.assertIn(b'test update', response.data)
+        self.assertIn(b'test title', response.data)
 
 
 class UpdateFormViewTest(_Base):
 
-    def test_update_register_page(self):
+    def test_update_register_view(self):
         self.check_status_code_with_admin('/update/register')
 
-    def test_update_edit_page(self):
+    def test_update_list_all(self):
+        content = 'this is a test update'
+        summary = 'this is a test update for unittest'
+
+        update = Update(content=content, summary=summary)
+        update.save()
+
+        res = self.check_status_code_with_admin('/update/items/all')
+        data = res.data.decode()
+
+        self.assertIn(update.content, data)
+
+    def test_update_list_view(self):
+        content = 'this is a test update'
+        summary = 'this is a test update for unittest'
+
+        update = Update(content=content, summary=summary)
+        update.save()
+
+        id_ = update.id
+
+        path = f'/update/item/{id_}'
+
+        res = self.check_status_code_with_admin(path)
+        data = res.data.decode()
+
+        self.assertIn(content, data)
+        self.assertIn(summary, data)
+
+
+    def test_update_edit_view(self):
         update = Update(content='test')
         update.save()
         id_ = update.id
@@ -244,6 +286,36 @@ class ReferenceFormViewTest(_Base):
     def test_reference_register_view(self):
         self.check_status_code_with_admin('/reference/register')
 
+    def test_reference_list_all(self):
+        author = 'test_author'
+        title = 'test_title'
+        summary = 'this is a test summary'
+        cite = Citation(author=author, title=title, summary=summary)
+        cite.save()
+
+        res = self.check_status_code_with_admin('/reference/items/all')
+        data = res.data.decode()
+
+        self.assertIn(cite.author, data)
+        self.assertIn(cite.title, data)
+
+    def test_reference_item_view(self):
+        author = 'test_author'
+        title = 'test_title'
+        summary = 'this is a test summary'
+        cite = Citation(author=author, title=title, summary=summary)
+        cite.save()
+        id_ = cite.id
+        path = f'/reference/item/{id_}'
+
+        # check if accessible only if user is admin
+        res = self.check_status_code_with_admin(path)
+        data = res.data.decode()
+
+        self.assertIn(author, data)
+        self.assertIn(title, data)
+        self.assertIn(summary, data)
+
     def test_reference_edit_view(self):
         cite = Citation(author='tester', title='test')
         cite.save()
@@ -251,6 +323,7 @@ class ReferenceFormViewTest(_Base):
 
         path = f'/reference/edit/{id_}'
 
+        # check if accessible only if user is admin
         self.check_status_code_with_admin(path)
 
         target_title = 'test title'

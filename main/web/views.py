@@ -128,10 +128,26 @@ def update_register():
     return render_template('update_form.html', form=form)
 
 
-@base.route('/update/edit/<int:update_id>', methods=['GET', 'PUT'])
+@base.route('/update/items/all')
 @login_required(admin=True)
-def update_edit(update_id):
-    update = Update.get(update_id)
+def list_update_items_all():
+    items = Update.query().all()
+    return render_template('update_items_all.html', items=items)
+
+
+@base.route('/update/item/<int:item_id>')
+@login_required(admin=True)
+def list_update_item(item_id):
+    item = Update.get(item_id)
+    if item is None:
+        return redirect(url_for('base.note'))
+    return render_template('update_item.html', item=item)
+
+
+@base.route('/update/edit/<int:item_id>', methods=['GET', 'PUT'])
+@login_required(admin=True)
+def update_edit(item_id):
+    update = Update.get(item_id)
     form = UpdateForm()
 
     if form.validate_on_submit():
@@ -153,6 +169,22 @@ def ref_register():
         Citation(author=author, name=name, year=year, link=link).save()
         return redirect(url_for('base.note'))
     return render_template('citation_form.html', form=form)
+
+
+@base.route('/reference/items/all')
+@login_required(admin=True)
+def list_ref_items_all():
+    items = Citation.query().all()
+    return render_template('citation_items_all.html', items=items)
+
+
+@base.route('/reference/item/<int:item_id>')
+@login_required(admin=True)
+def list_ref_item(item_id):
+    item = Citation.get(item_id)
+    if item is None:
+        return redirect(url_for('base.note'))
+    return render_template('citation_item.html', item=item)
 
 
 @base.route('/reference/edit/<int:ref_id>', methods=['GET', 'PUT'])

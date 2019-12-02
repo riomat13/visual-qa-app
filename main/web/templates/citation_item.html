@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block title %} - Citation Item{% endblock title %}
+{% block content %}
+{% if item %}
+<ul>
+    <li>ID: {{ item.id }}</li>
+    <li>Author: {{ item.author }}</li>
+    <li>Title: {{ item.title }}</li>
+    <li>Year: {{ item.year }}</li>
+    <li>URL: {{ item.url }}</li>
+    <li>Summary: {{ item.summary }}</li>
+</ul>
+<a class="btn btn-md btn-primary" href="{{ url_for('base.ref_edit', ref_id=item.id) }}">Edit</a>
+{% endif %}
+{% endblock content %}

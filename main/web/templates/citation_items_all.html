@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block title %} - Citation Items{% endblock title %}
+{% block content %}
+{% if items %}
+<table class="table-list-items">
+    <tr class="table-row__title">
+        <th>ID</th>
+        <th>Title</th>
+        <th>Author</th>
+        <th class="table-row__item-fade">URL</th>
+        <th>Year</th>
+    </tr>
+{% for item in items %}
+<tr class="table-row__item" onclick="window.location='{{ url_for('base.list_ref_item', item_id=item.id) }}'">
+    <td class="table-row__item-right">{{ item.id }}</td>
+    <td>{{ item.title }}</td>
+    <td>{{ item.author }}</td>
+    <td class="table-row__item-fade">{{ item.url }}</td>
+    <td>{{ item.year }}</td>
+</tr>
+{% endfor %}
+</table>
+{% else %}
+<h2>Nothing to display</h2>
+{% endif %}
+{% endblock %}

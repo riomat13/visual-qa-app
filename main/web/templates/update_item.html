@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block title %} - Update Item{% endblock title %}
+{% block content %}
+{% if item %}
+<ul>
+    <li>ID: {{ item.id }}</li>
+    <li>Update Date: {{ item.update_at }}</li>
+    <li>Content: {{ item.content }}</li>
+    <li>Summary: {{ item.summary }}</li>
+</ul>
+<a class="btn btn-md btn-primary" href="{{ url_for('base.update_edit', item_id=item.id) }}">Edit</a>
+{% endif %}
+{% endblock content %}

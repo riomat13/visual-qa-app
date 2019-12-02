@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block title %} - Update Items{% endblock title %}
+{% block content %}
+{% if items %}
+<table class="table-list-items">
+    <tr class="table-row__title">
+        <th>ID</th>
+        <th>Date</th>
+        <th>Content</th>
+    </tr>
+{% for item in items %}
+<tr class="table-row__item" onclick="window.location='{{ url_for('base.list_update_item', item_id=item.id) }}'">
+    <td class="table-row__item-right">{{ item.id }}</td>
+    <td>{{ item.update_at.strftime('%m/%d/%Y') }}</td>
+    <td>{{ item.content }}</td>
+</tr>
+{% endfor %}
+</table>
+{% else %}
+<h2>Nothing to display</h2>
+{% endif %}
+{% endblock %}

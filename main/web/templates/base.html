@@ -19,8 +19,10 @@
             <a class="login-user-tag">@{{ g.user.username }}</a>
           </div>
           <div class="login-menu-content">
+            {% if g.user.is_admin %}
             <a href="{{ url_for('base.update_register') }}">Updates</a>
             <a href="{{ url_for('base.ref_register') }}">References</a>
+            {% endif %}
             <a href="{{ url_for('base.logout') }}">Logout</a>
           </div>
         </div>

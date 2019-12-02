@@ -85,6 +85,43 @@ input[type="password"] {
   cursor: default;
 }
 
+.table-list-items {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table-row__title th {
+  padding: 10px;
+  border: 1px solid #ccc;
+}
+
+.table-row__item {
+  cursor: pointer;
+}
+
+.table-row__item-right {
+  text-align: right;
+}
+
+@media only screen and (max-width: 1026px) {
+  .table-row__item-fade {
+    display: none;
+  }
+}
+
+.table-row__item td {
+  padding: 8px;
+  border: 1px solid #ccc;
+}
+
+.table-row__item:nth-child(odd) {
+  background-color: #eee;
+}
+
+.table-row__item:hover {
+  background-color: #ddd;
+}
+
 .login-menu {
   position: absolute;
   display: inline-block;
@@ -101,7 +138,7 @@ input[type="password"] {
   z-index: 1;
 }
 
-.login-menu:hover>.login-menu-user a {
+.login-menu:hover > .login-menu-user a {
   background-color: #777;
   color: #fff;
 }
@@ -113,7 +150,7 @@ input[type="password"] {
 
 .login-menu-content a {
   display: block;
-  background-color: #dedede;
+  background-color: #ebebeb;
   color: #111;
   font-size: 0.9rem;
 }
@@ -121,7 +158,6 @@ input[type="password"] {
 .container {
   box-sizing: border-box;
   margin: 0;
-  padding: 16px;
   height: 100%;
   width: 100%;
 }
@@ -241,4 +277,14 @@ input[type="password"] {
 #edit-submit-btn {
   margin-top: 20px;
   margin-left: 25%;
+}
+
+#update-list,
+#reference-table {
+  padding: 10px;
+}
+
+#update-list li,
+#reference-table li {
+  list-style-type: none;
 }
