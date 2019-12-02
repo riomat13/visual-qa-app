@@ -24,3 +24,6 @@ exclude_lines =
     def forbidden
     def page_not_found
     def method_not_allowed
+
+    # third party library
+    def generate_heatmap

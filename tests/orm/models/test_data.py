@@ -6,7 +6,7 @@ import unittest
 from main.settings import set_config
 set_config('test')
 
-from main.orm.models.data import Image, Question
+from main.orm.models.data import Image, Question, WeightFigure
 
 from .base import _Base
 
@@ -65,6 +65,15 @@ class QuestionModelTest(_Base):
         self.assertFalse(data.updated)
         data.update()
         self.assertTrue(data.updated)
+
+
+class WeightFigureTest(_Base):
+
+    def test_weight_model_automatically_set_filename(self):
+        w = WeightFigure()
+        w.save()
+
+        self.assertEqual(w.filename, f'{w.id:05d}.jpg')
 
 
 if __name__ == '__main__':

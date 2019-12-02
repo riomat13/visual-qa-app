@@ -58,3 +58,15 @@ class Question(BaseMixin, Base):
         """Set as True if type is checked."""
         self.updated = True
         self.save()
+
+
+class WeightFigure(BaseMixin, Base):
+    __tablename__ = 'weight_figure'
+
+    filename = Column(String(9), nullable=False)
+    log_id = Column(Integer, ForeignKey('request_log.id'))
+    log = relationship('RequestLog')
+
+    def __init__(self, log_id=None):
+        filename = f'{WeightFigure.query().count()+1:05d}.jpg'
+        super(WeightFigure, self).__init__(filename=filename, log_id=log_id)
