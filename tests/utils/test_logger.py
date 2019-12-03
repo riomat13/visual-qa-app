@@ -4,6 +4,8 @@
 import unittest
 from unittest.mock import patch
 
+import warnings
+
 from main.orm.models.ml import RequestLog
 from main.mixins.models import BaseMixin, ModelLogMixin
 from main.utils.logger import save_log
@@ -24,29 +26,51 @@ class AddLogToModelTest(unittest.TestCase):
     def test_on_request_log(self):
 
         error_text = 'should be raised'
+        test_outputs = []
 
         # mock log
         class Log(ModelLogMixin, BaseMixin):
-            def __init__(self, log_type, log_text):
+            def __init__(self, log_type, log_text, log_class=None):
                 self.log_type = log_type
                 self.log_text = log_text
+                self.log_class = log_class
 
             def save(self):
-                # check if saving log_text
-                raise NotImplementedError(self.log_text)
+                test_outputs.append([self.log_type, self.log_text, self.log_class])
 
+        # handle error
         @save_log(Log)
         def test_func_error():
             raise ValueError(error_text)
 
-        with self.assertRaises(NotImplementedError, msg=error_text):
-            test_func_error()
+        # should be saved the error text by ValueError
+        test_func_error()
+        ltype, ltext, lcls = test_outputs.pop()
+        self.assertEqual(ltype, 'error')
+        self.assertEqual(ltext, error_text)
+        self.assertEqual(lcls, 'ValueError')
 
+        warning_text = 'should be warned'
+
+        # handle warning
+        @save_log(Log)
+        def test_func_warning():
+            warnings.warn(warning_text, RuntimeWarning)
+
+        test_func_warning()
+        ltype, ltext, lcls = test_outputs.pop()
+        self.assertEqual(ltype, 'warning')
+        self.assertIn(warning_text, ltext)
+        self.assertEqual(lcls, 'RuntimeWarning')
+
+
+        # without error nor warning
         @save_log(Log)
         def test_func_success():
             return 1
 
-        try:
-            test_func_success()
-        except:
-            self.fail('Should not fail the test')
+        test_func_success()
+        ltype, ltext, lcls = test_outputs.pop()
+        self.assertEqual(ltype, 'success')
+        self.assertEqual(ltext, 'success')
+        self.assertIsNone(lcls)

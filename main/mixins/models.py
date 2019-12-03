@@ -64,6 +64,8 @@ class ModelLogMixin(object):
     logged_time = Column(DateTime, default=datetime.utcnow())
     # Log Type: e.g. Info, Warning, Error
     log_type = Column(String(32), nullable=False)
+    # class name if error. e.g. ValueError
+    log_class = Column(String(32), nullable=True)
     # Log Detail
     log_text = Column(Text, nullable=False)
 

@@ -26,17 +26,22 @@ def save_log(model):
                     res = func(*args, **kwargs)
                     log = model(log_type='success',
                                 log_text='success')
+                    log.save()
                     return res
                 except Exception as e:
                     log = model(log_type='error',
-                                log_text=e)
+                                log_class=e.__class__.__name__,
+                                log_text=str(e))
                     log.save()
+
                 finally:
+                    # whether success or not, save warnings
                     for warning in w:
                         text = '{}:{} {}'.format(warning.filename,
                                                  warning.lineno,
                                                  warning.message)
                         log = model(log_type='warning',
+                                    log_class=warning.category.__name__,
                                     log_text=text)
                         log.save()
         return wrapper
