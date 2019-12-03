@@ -14,7 +14,7 @@ from main.web.forms import UserForm, QuestionForm, UpdateForm, CitationForm
 from main.web.auth import verify_user, login_required
 from main.models.client import run_model
 from main.orm.models.web import Update, Citation
-from main.orm.models.data import Image, Question
+from main.orm.models.data import Image, Question, WeightFigure
 
 log = logging.getLogger(__name__)
 
@@ -61,6 +61,7 @@ def prediction():
     filename = session.get('image', None)
     question = None
     pred = None
+    figpath = None
 
     form = QuestionForm()
 
@@ -76,7 +77,11 @@ def prediction():
 
             Question(question=question).save()
             path = os.path.join(Config.UPLOAD_DIR, filename)
-            pred = asyncio.run(run_model(path, question))
+            pred, fig_id = asyncio.run(run_model(path, question))
+            fig = WeightFigure.get(fig_id)
+            if fig is not None:
+                figfile = fig.filename
+                figpath = os.path.join(Config.FIG_DIR, figfile)
 
         # uploaded an image
         if request.form['action'] == 'upload':
@@ -103,6 +108,7 @@ def prediction():
                            filename=filename,
                            question=question,
                            prediction=pred,
+                           figpath=figpath,
                            form=form)
 
 

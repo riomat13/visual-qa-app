@@ -23,7 +23,7 @@ def save_figure(fig, log=None):
         log: sqlalchemy DeclativeMeta (optional)
             correspond RequestLog model
     Return:
-        None
+        int: the figure ID in DB
     """
     base = Config.FIG_DIR
 
@@ -35,6 +35,7 @@ def save_figure(fig, log=None):
 
     path = os.path.join(base, filename)
     fig.savefig(path)
+    return w.id
 
 
 def generate_heatmap(arr, inputs, outputs):

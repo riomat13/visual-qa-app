@@ -17,6 +17,7 @@ set_config('test')
 from main.web.app import create_app
 from main.orm.db import Base
 from main.orm.models.base import User
+from main.orm.models.data import WeightFigure
 from main.orm.models.web import Update, Citation
 
 logging.disable(logging.CRITICAL)
@@ -173,7 +174,7 @@ class PredictionTest(_Base):
     def test_return_with_prediction(self, mock_run, mock_run_model, mock_q_save):
         test_sent = 'this is test sentence'
         # mock prediction result
-        mock_run.return_value = test_sent
+        mock_run.return_value = test_sent, 1000
 
         response = self.client.post(
             '/prediction',
@@ -199,9 +200,37 @@ class PredictionTest(_Base):
             )
         )
 
+        data = response.data.decode()
+
         self.assertEqual(response.status_code, 200)
-        self.assertIn(test_sent, response.data.decode())
+        self.assertIn('some question', data)
+        self.assertIn(test_sent, data)
         mock_q_save.assert_called_once()
+
+    @patch('main.web.views.Question.save')
+    @patch('main.web.views.run_model')
+    @patch('main.web.views.asyncio.run')
+    def test_figure_is_passed_to_template(self, mock_run, mock_run_model, mock_q_save):
+        test_sent = 'this is test sentence'
+        w = WeightFigure()
+        w.filename = 'testfile'
+        w.save()
+
+        # mock prediction result
+        mock_run.return_value = test_sent, w.id
+
+        self.test_upload_image()
+        response = self.client.post(
+            '/prediction',
+            data=dict(
+                action='Submit',
+                question='some question',
+            ),
+            follow_redirects=True,
+        )
+
+        data = response.data.decode()
+        self.assertRegex(data, r'<img src="[\w/_]+testfile">')
 
 
 class NoteViewTest(_Base):

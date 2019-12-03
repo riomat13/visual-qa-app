@@ -64,9 +64,8 @@ class WeightFigure(BaseMixin, Base):
     __tablename__ = 'weight_figure'
 
     filename = Column(String(9), nullable=False)
-    log_id = Column(Integer, ForeignKey('request_log.id'))
-    log = relationship('RequestLog')
+    log = relationship('RequestLog', back_populates='fig', uselist=False)
 
-    def __init__(self, log_id=None):
+    def __init__(self, log=None):
         filename = f'{WeightFigure.query().count()+1:05d}.jpg'
-        super(WeightFigure, self).__init__(filename=filename, log_id=log_id)
+        super(WeightFigure, self).__init__(filename=filename, log=log)

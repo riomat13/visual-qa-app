@@ -35,6 +35,9 @@
   {% if prediction %}
   <p>Question: {{ question }}</p>
   <p>Answer: {{ prediction }}</p>
+  {% if figpath %}
+  <img src="{{ figpath }}">
+  {% endif %}
   {% endif %}
 </div>
 </div>
