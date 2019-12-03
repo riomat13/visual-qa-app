@@ -10,6 +10,8 @@ from main.orm.db import Base
 from main.mixins.models import BaseMixin
 
 
+# TODO: add pagination
+
 class Update(BaseMixin, Base):
     """All update regarding this app to display on web app."""
 

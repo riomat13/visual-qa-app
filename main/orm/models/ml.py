@@ -116,6 +116,9 @@ class RequestLog(ModelLogMixin, BaseMixin, Base):
     question_id = Column(Integer, ForeignKey('question.id'))
     image_id = Column(Integer, ForeignKey('image.id'))
 
+    fig_id = Column(Integer, ForeignKey('weight_figure.id'))
+    fig = relationship('WeightFigure', back_populates='log')
+
     # predicted score and model
     score = relationship('PredictionScore', back_populates='log')
     model_id = Column(Integer, ForeignKey('prediction_model.id'))

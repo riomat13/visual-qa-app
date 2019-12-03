@@ -9,25 +9,26 @@ import matplotlib.pyplot as plt
 
 from main.settings import Config
 from main.utils.loader import load_image_simple
+from main.orm.models.ml import RequestLog
 from main.orm.models.data import WeightFigure
 
 log = logging.getLogger(__name__)
 
 
-def save_figure(fig, id=None):
+def save_figure(fig, log=None):
     """Save figure to file and store the info to DB.
     Args:
         fig: matplotlib.figure.Figure
             figure object to save
-        id: int (optional)
-            correspond ID to make relationship with request
+        log: sqlalchemy DeclativeMeta (optional)
+            correspond RequestLog model
     Return:
         None
     """
     base = Config.FIG_DIR
 
     # automatically generate new file name
-    w = WeightFigure(log_id=id)
+    w = WeightFigure(log=log)
     w.save()
 
     filename = w.filename
