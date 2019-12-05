@@ -6,16 +6,19 @@
 
 import os.path
 import warnings
+import logging
 import time
 import random
 import json
 
 import tensorflow as tf
-from tensorflow.keras.applications import MobileNet, mobilenet
+from tensorflow.keras.applications import mobilenet
 
 from keras_preprocessing import image
 
 from main.settings import ROOT_DIR
+
+log = logging.getLogger(__name__)
 
 
 def load_image(img_path):
@@ -38,7 +41,7 @@ def load_image(img_path):
     return img
 
 
-def load_image_simple(img_path):
+def load_image_simple(img_path, normalize=True):
     """Load image and store value into numpy.ndarray.
     This is for skipping image processing steps and speeding up
     training steps, therefore all image shapes must be (224, 224, 3).
@@ -46,11 +49,15 @@ def load_image_simple(img_path):
     Args:
         img_path: str
             path to an image file
+        normalize: bool
+            return array with range [0.0, 1.0]
     Returns:
         numpy.ndarray with shape=(224, 224, 3), dtype=float32
     """
     img = image.load_img(img_path, target_size=(224, 224))
     img = image.img_to_array(img)
+    if normalize:
+        img /= 255.
     return img
 
 
@@ -68,7 +75,7 @@ def fetch_question_types(data_dir=None):
         for line in f:
             classes.append(line.strip())
 
-    print('Total Number of Classes:', len(classes))
+    log.info('Total Number of Classes:', len(classes))
     return classes
 
 
@@ -131,7 +138,7 @@ class VQA(object):
     def save(self, filepath):
         with open(filepath, 'w') as f:
             json.dump(self._dataset, f)
-        print(f'Saved data to {filepath}')
+        log.info(f'Saved data to {filepath}')
 
     def _get_answers(self, data):
         question_type = data['question_type']
@@ -173,7 +180,7 @@ class VQA(object):
             self._generatable = True
 
         end = time.time()
-        print('Loaded {} dataset in {:.4f} sec.'.format(
+        log.info('Loaded {} dataset in {:.4f} sec.'.format(
             len(self._dataset), end - start))
 
     @classmethod

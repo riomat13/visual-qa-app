@@ -1,14 +1,24 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import os
+# ignore tensorflow debug info and logs
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+
+import logging
+
 import unittest
 from unittest.mock import patch, mock_open
+
+import numpy as np
 
 from main.utils.loader import (
     load_image, load_image_simple,
     VQA,
     fetch_question_types
 )
+
+logging.disable(logging.CRITICAL)
 
 
 JSON_DATA = {
@@ -41,6 +51,10 @@ class ImageLoaderTest(unittest.TestCase):
         path = 'tests/data/test_img1.jpg'
         img = load_image_simple(path)
         self.assertEqual(img.shape, (224, 224, 3))
+        
+        img = load_image_simple(path, normalize=True)
+        self.assertLessEqual(np.max(img), 1.0)
+        self.assertGreaterEqual(np.min(img), 0.0)
 
 
 class LoadDatasetTest(unittest.TestCase):
