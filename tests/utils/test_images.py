@@ -26,7 +26,7 @@ class ImageDataTest(unittest.TestCase):
         img_obj = Mock()
         img_obj.filename = 'test1.jpg'
 
-        update_row_image(img_obj)
+        update_row_image(img_obj, True)
 
         import os
         self.assertTrue(os.path.isfile(path))
@@ -47,7 +47,7 @@ class ImageDataTest(unittest.TestCase):
         img_obj = Mock()
         img_obj.filename = 'test1.jpg'
 
-        update_row_image(img_obj)
+        update_row_image(img_obj, True)
 
         # check if generated file removed successfully
         # this should work since both new and old path are the same

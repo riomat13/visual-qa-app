@@ -14,12 +14,12 @@ from main.utils.loader import load_image_simple
 log = logging.getLogger(__name__)
 
 
-def update_row_image(img_model, send=False, upload=False):
+def update_row_image(img_model, remove=False, *, send=False, upload=False):
     img_file = img_model.filename
     path = os.path.join(Config.UPLOAD_DIR, img_file)
     
     # resize image to (224, 224, 3)
-    img = load_image_simple(path)
+    img = load_image_simple(path, normalize=False)
 
     # update data in database
     img_model.update()
@@ -34,8 +34,9 @@ def update_row_image(img_model, send=False, upload=False):
         # send original data via email
         send_image(path)
 
-    # delete old data from app
-    delete_image(path)
+    if remove:
+        # delete old data from app
+        delete_image(path)
 
 
 def save_image(img_arr, path):
