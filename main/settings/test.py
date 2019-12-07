@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from .base import Config
+import os.path
+
+from .base import ROOT_DIR, Config
 
 
 class TestConfig(Config):
@@ -12,3 +14,5 @@ class TestConfig(Config):
 
     # Database settings
     DATABASE_URI = 'sqlite:////tmp/tmp-app-test.db'
+
+    TEST_UPLOAD_DIR = os.path.join(ROOT_DIR, 'tests/data/uploaded')

@@ -3,7 +3,7 @@
 
 import os
 
-from .base import Config
+from .base import ROOT_DIR, Config
 
 
 class DevelopmentConfig(Config):
@@ -17,3 +17,5 @@ class DevelopmentConfig(Config):
 
     DATABASE_URI = f'postgres://postgres:{POSTGRES_PASSWORD}@' \
                    f'{DATABASE_HOST}:{DATABASE_PORT}/app_db_dev'
+
+    TEST_UPLOAD_DIR = os.path.join(ROOT_DIR, 'tests/data/uploaded')
