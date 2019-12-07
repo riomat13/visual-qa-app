@@ -170,7 +170,8 @@ input[type="password"] {
   font-size: 0.9rem;
 }
 
-.content-group, .note-group {
+.content-group,
+.note-group {
   padding: 16px;
 }
 
@@ -204,13 +205,14 @@ input[type="password"] {
 .btn-md {
   font-size: 1rem;
   padding: 10px 16px;
-  border-radius: 4px;
   width: 100px;
+  border-radius: 4px;
 }
 
 .btn-sm {
   font-size: 0.9rem;
   padding: 8px 12px;
+  width: 80px;
   border-radius: 3px;
 }
 
@@ -227,6 +229,11 @@ input[type="password"] {
 .btn-default {
   background-color: #bbb;
   color: #fff;
+}
+
+.btn-default:hover {
+  background-color: #999;
+  opacity: 1.0;
 }
 
 .close {
@@ -306,6 +313,16 @@ input[type="password"] {
 #question-submit {
   display: inline-block;
   margin: 10px 0;
+}
+
+.item-content-group {
+  padding: 20px;
+  width: 90%;
+  max-width: 600px;
+}
+
+.item-content-group__item {
+  margin-bottom: 15px;
 }
 
 #update-list,

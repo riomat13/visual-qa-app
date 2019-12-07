@@ -2,14 +2,35 @@
 {% block title %} - Citation Item{% endblock title %}
 {% block content %}
 {% if item %}
-<ul>
-    <li>ID: {{ item.id }}</li>
-    <li>Author: {{ item.author }}</li>
-    <li>Title: {{ item.title }}</li>
-    <li>Year: {{ item.year }}</li>
-    <li>URL: {{ item.url }}</li>
-    <li>Summary: {{ item.summary }}</li>
-</ul>
-<a class="btn btn-md btn-primary" href="{{ url_for('base.ref_edit', ref_id=item.id) }}">Edit</a>
+<div class="item-content-group">
+  <div class="row item-content-group__item">
+    <div class="col-25">ID:</div>
+    <div class="c0l-75">{{ item.id }}</div>
+  </div>
+  <div class="row item-content-group__item">
+    <div class="col-25">Author:</div>
+    <div class="c0l-75">{{ item.author }}</div>
+  </div>
+  <div class="row item-content-group__item">
+    <div class="col-25">Title:</div>
+    <div class="c0l-75">{{ item.title }}</div>
+  </div>
+  <div class="row item-content-group__item">
+    <div class="col-25">Year:</div>
+    <div class="c0l-75">{{ item.year }}</div>
+  </div>
+  <div class="row item-content-group__item">
+    <div class="col-25">URL:</div>
+    <div class="c0l-75">{{ item.url }}</div>
+  </div>
+  <div class="row item-content-group__item">
+    <div class="col-25">Summary:</div>
+    <div class="c0l-75">{{ item.summary }}</div>
+  </div>
+  <div class="row form-btn-group">
+    <a href="{{ url_for('base.list_ref_items_all') }}" class="btn btn-md btn-default">Back</a>
+    <a class="btn btn-md btn-primary" href="{{ url_for('base.ref_edit', item_id=item.id) }}">Edit</a>
+  </div>
+</div>
 {% endif %}
 {% endblock content %}

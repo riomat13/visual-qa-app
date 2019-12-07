@@ -161,6 +161,8 @@ def update_edit(item_id):
         update.content = form.content.data
         update.save()
         return redirect(url_for('base.note'))
+
+    # set initial values
     form.content.data = update.content
     return render_template('update_form.html', form=form)
 
@@ -200,10 +202,10 @@ def list_ref_item(item_id):
     return render_template('citation_item.html', item=item)
 
 
-@base.route('/reference/edit/<int:ref_id>', methods=['GET', 'PUT'])
+@base.route('/reference/edit/<int:item_id>', methods=['GET', 'PUT'])
 @login_required(admin=True)
-def ref_edit(ref_id):
-    cite = Citation.get(ref_id)
+def ref_edit(item_id):
+    cite = Citation.get(item_id)
 
     form = CitationForm()
     if form.validate_on_submit():
