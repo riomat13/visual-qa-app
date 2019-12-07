@@ -42,9 +42,9 @@ def _get_mobilenet_encoder():
 get_mobilenet_encoder = _get_mobilenet_encoder()
 
 
-class Attention(tf.keras.Model):
+class _AdditiveAttention(tf.keras.Model):
     def __init__(self, units):
-        super(Attention, self).__init__()
+        super(_AdditiveAttention, self).__init__()
         # FC for input feature
         self.dense_features = tf.keras.layers.Dense(units)
         # FC for hidden states from encoder
@@ -85,65 +85,113 @@ class Attention(tf.keras.Model):
         return context, attention_weights
 
 
-class Encoder(tf.keras.Model):
-    """Encoding image and question to answer the question."""
-    def __init__(self, units=128):
-        super(Encoder, self).__init__()
-        self.dense_img = tf.keras.layers.Dense(units)
-        self.dense_sent = tf.keras.layers.Dense(units)
+class _DotAttention(tf.keras.Model):
+    def __init__(self, seq_length):
+        super(_DotAttention, self).__init__()
+        self.repeat = tf.keras.layers.RepeatVector(seq_length)
 
-    def call(self, img_features, sent_features):
-        """Calculate encoded feature by images and questions.
-        Args:
-            img_features : 2D tensor object represents image feature
-            sent_features: 2D tensor object represents questions embedding
-        Return:
-            2D tensor
-                shape => (batch_size, units)
+    def call(self, features, states):
         """
-        img_features = self.dense_img(img_features)
-        sent_features = self.dense_sent(sent_features)
-        state = tf.nn.tanh(img_features + sent_features)
-        return state
+        Args:
+            features: encoded features from RNN
+                shape = (batch_size, sequence_length, units)
+            states:   hidden states
+                shape = (batch_size, hidden_size)
+        Returns:
+            context: context tensor
+                shape = (batch_size, hidden_size)
+            attention_weights: weights used for attention
+                shape = (batch_size, sequence_length, 1)
+        """
+        states = self.repeat(states)
 
+        # calculate attention weights with dot score
+        # (batch_size, sequence_length, units)
+        score = features * states
+        score = tf.reduce_sum(score, axis=-1)
+        score = tf.expand_dims(score, axis=-1)
+        attention_weights = tf.nn.softmax(score, axis=1)
 
-class Decoder(tf.keras.Model):
-    """Decoding by passing previously gererated word."""
-    def __init__(self,
-                 units,
-                 vocab_size,
-                 embedding_layer=None):
-        super(Decoder, self).__init__()
-        self.units = units
-
-        self.embedding = embedding_layer
-        if self.embedding is None:
-            # if not provided, re-define with fixed dimmension
-            self.embedding = tf.keras.layers.Embedding(vocab_size+1, 256)
-
-        self.gru = tf.keras.layers.GRU(units,
-                                       return_sequences=True,
-                                       return_state=True,
-                                       recurrent_initializer='glorot_uniform')
-        self.dense1 = tf.keras.layers.Dense(units)
-        self.output_layer = tf.keras.layers.Dense(vocab_size)
-        self.attention = Attention(units)
-
-    def call(self, x, features, encoded):
+        # update the feature weighted by importance
         # context shape = (batch_size, units)
-        context, attention_weights = self.attention(features, encoded)
-        x = self.embedding(x)
+        context = attention_weights * features
+        context = tf.reduce_sum(context, axis=1)
 
-        # concatenate sequence and attention weighted context
-        # shape => (batch_size, 1, embedding_dim + attention_units)
-        x = tf.concat([tf.expand_dims(context, 1), x], axis=-1)
+        return context, attention_weights
 
-        x, state = self.gru(x)
 
-        # output shape => (batch_size, 1, units)
-        x = self.dense1(x)
-        # reshape to (batch_size * 1, units)
-        x = tf.reshape(x, (-1, x.shape[-1]))
+class Attention(tf.keras.Model):
+    def __init__(self, units, seq_length, mode='dot'):
+        super(Attention, self).__init__()
+        # TODO: add other score functions
+        mode = mode.lower()
+        if mode == 'dot':
+            self.model = _DotAttention(seq_length)
+        elif mode == 'additive':
+            self.model = _AdditiveAttention(units)
+        else:
+            raise ValueError('Choose mode from [`dot`, `additive`]')
 
-        x = self.output_layer(x)
-        return x, state, attention_weights
+    def call(self, features, states):
+        return self.model(features, states)
+
+
+class SimpleQuestionImageEncoder(tf.keras.Model):
+    """Encode questions and image by embedding and dense."""
+    def __init__(self, units, vocab_size, embedding_dim):
+        super(SimpleQuestionImageEncoder, self).__init__()
+        self.embedding = tf.keras.layers.Embedding(vocab_size+1, embedding_dim)
+        self.dense = tf.keras.layers.Dense(units)
+
+    def call(self, qs, imgs):
+        """Encoding Question and Image
+
+        Args:
+            qs: question
+                shape: (batch_size, seq_length)
+            imgs: images
+                shape: (batch_size, 49, 1024)
+
+        Return:
+            q_embedded: embedded question
+                shape: (batch_size, seq_length, embedding_dim)
+            img_features: image features
+                shape: (batch_size, units)
+        """
+        q_embedded = self.embedding(qs)
+        img_features = self.dense(imgs)
+        return q_embedded, img_features
+
+
+class QuestionImageEncoder(tf.keras.Model):
+    """Encode questions and image by embedding and dense."""
+    def __init__(self, units, vocab_size, embedding_dim):
+        super(QuestionImageEncoder, self).__init__()
+        self.embedding = tf.keras.layers.Embedding(vocab_size+1, embedding_dim)
+        self.dense = tf.keras.layers.Dense(units)
+        self.bi_gru = tf.keras.layers.Bidirectional(
+            tf.keras.layers.GRU(embedding_dim,
+                                return_sequences=True,
+                                recurrent_initializer='glorot_uniform'),
+            merge_mode='mul',
+        )
+
+    def call(self, qs, imgs):
+        """Encoding Question and Image
+
+        Args:
+            qs: question
+                shape: (batch_size, seq_length)
+            imgs: images
+                shape: (batch_size, 49, 1024)
+
+        Return:
+            q_embedded: embedded question
+                shape: (batch_size, seq_length, embedding_dim)
+            img_features: image features
+                shape: (batch_size, units)
+        """
+        qs_features = self.embedding(qs)
+        qs_features = self.bi_gru(qs_features)
+        imgs_encoded = self.dense(imgs)
+        return qs_features, imgs_encoded

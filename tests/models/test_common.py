@@ -15,8 +15,8 @@ from main.models import (
     get_mobilenet_encoder,
     Attention,
     QuestionTypeClassification,
-    Encoder,
-    Decoder
+    SimpleQuestionImageEncoder,
+    QuestionImageEncoder,
 )
 
 
@@ -39,7 +39,23 @@ class MobileNetEncoderTest(unittest.TestCase):
 
 class AttentionModelTest(unittest.TestCase):
 
-    def test_attention_model(self):
+    def test_dot_attention_model(self):
+        # feature shape is (128,)
+        batch_size = 4
+        seq_length = 10
+        hidden_units = 128
+
+        # encoded sequence shape (batch_size, time_steps, seq_len)
+        features = np.random.randn(batch_size, seq_length, hidden_units)
+        states = np.random.randn(batch_size, hidden_units)
+
+        # different unit size from input
+        model = Attention(32, seq_length)
+        out, weights = model(features, states)
+        self.assertEqual(out.shape, (batch_size, hidden_units))
+        self.assertEqual(weights.shape, (batch_size, seq_length, 1))
+
+    def test_additive_attention_model(self):
         # feature shape is (128,)
         batch_size = 4
         seq_length = 10
@@ -51,7 +67,7 @@ class AttentionModelTest(unittest.TestCase):
 
         # different unit size from input
         units = 32
-        model = Attention(units)
+        model = Attention(units, seq_length, mode='additive')
         out, weights = model(features, states)
         self.assertEqual(out.shape, (batch_size, units))
         self.assertEqual(weights.shape, (batch_size, seq_length, 1))
@@ -75,75 +91,32 @@ class QuestionTypeClassificationTest(unittest.TestCase):
         self.assertEqual(out.shape, (batch_size, n_classes))
 
 
-class EncoderTest(unittest.TestCase):
+class QuestionImageEncoderTest(unittest.TestCase):
 
-    def test_encoder_model(self):
+    def test_question_image_encoder_model(self):
         batch_size = 4
-        image_features = np.random.randn(batch_size, 1024)
-        sent_features = np.random.randn(batch_size, 128)
+        seq_length = 10
+        embedding_dim = 64
+        vocab_size = 1000
+        image_features = np.random.randn(batch_size, 49, 1024)
+        sequence = np.random.randint(0, vocab_size, (batch_size, seq_length))
 
         units = 64
-        model = Encoder(units=units)
-        out = model(image_features, sent_features)
-        self.assertEqual(out.shape, (batch_size, units))
+        model = QuestionImageEncoder(units, 1000, embedding_dim)
+        q_out, img_out = model(sequence, image_features)
+        self.assertEqual(q_out.shape, (batch_size, seq_length, embedding_dim))
+        self.assertEqual(img_out.shape, (batch_size, 49, units))
 
-
-class DecoderTest(unittest.TestCase):
-
-    @patch('main.models.Attention.call')
-    def test_decoder_model(self, mock_attention):
-        attention_units = 16
-        units = 32
+    def test_simple_question_image_encoder_model(self):
         batch_size = 4
-        vocab_size = 100
-        input_shape = (batch_size, 1)
+        seq_length = 10
+        embedding_dim = 64
+        vocab_size = 1000
+        image_features = np.random.randn(batch_size, 49, 1024)
+        sequence = np.random.randint(0, vocab_size, (batch_size, seq_length))
 
-        input_word = np.random.randint(0, vocab_size-1, input_shape)
-
-        # mocking layers
-        # attention return shape (batch_size, seq_length, units)
-        mock_attention.return_value = \
-            (np.random.randn(batch_size, attention_units),
-             np.random.randn(batch_size, attention_units, 1))
-
-        embedding_layer = Mock()
-        embedding_layer.return_value = \
-            np.random.randn(batch_size, 1, vocab_size)
-
-        model = Decoder(units, vocab_size, embedding_layer)
-
-        out, state, attention_weights = model(input_word, None, None)
-
-        mock_attention.assert_called_once()
-
-        # predicted next one word by softmax
-        self.assertEqual(out.shape, (batch_size, vocab_size))
-        self.assertEqual(state.shape, (batch_size, units))
-
-    @patch('main.models.Attention.call')
-    def test_decoder_model_without_reusing_embeddings(self, mock_attention):
-        attention_units = 16
-        units = 32
-        batch_size = 4
-        vocab_size = 100
-        input_shape = (batch_size, 1)
-
-        input_word = np.random.randint(0, vocab_size-1, input_shape)
-
-        # mocking layers
-        # attention return shape (batch_size, seq_length, units)
-        mock_attention.return_value = \
-            (np.random.randn(batch_size, attention_units)
-                .astype(np.float32),
-             np.random.randn(batch_size, attention_units, 1)
-                .astype(np.float32))
-
-        model = Decoder(units, vocab_size)
-
-        out, state, attention_weights = model(input_word, None, None)
-
-        mock_attention.assert_called_once()
-
-        # predicted next one word by softmax
-        self.assertEqual(out.shape, (batch_size, vocab_size))
-        self.assertEqual(state.shape, (batch_size, units))
+        units = 64
+        model = SimpleQuestionImageEncoder(units, 1000, embedding_dim)
+        q_out, img_out = model(sequence, image_features)
+        self.assertEqual(q_out.shape, (batch_size, seq_length, embedding_dim))
+        self.assertEqual(img_out.shape, (batch_size, 49, units))
