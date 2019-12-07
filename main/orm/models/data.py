@@ -28,13 +28,14 @@ class Image(BaseMixin, Base):
                              'Make sure extention is included in file name '
                              'and file is either `.jpg` or `.png`')
         # accept only filename as input
-        super(Image, self).__init__(filename=filename, saved_at=saved_at)
+        super(Image, self).__init__(filename=filename,
+                                    original=filename,
+                                    saved_at=saved_at)
 
     def update(self):
         """Execute once processed original data."""
         # replace name with id
         _, ext = os.path.splitext(self.filename)
-        self.original = self.filename
         self.filename = f'{self.id:05d}{ext}'
         self.processed = True
         self.save()
