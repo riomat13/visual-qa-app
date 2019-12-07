@@ -15,12 +15,16 @@ from main.web.auth import verify_user
 log = logging.getLogger(__name__)
 
 
-@api.route('/models/all')
-def model_list():
-    """Return model list availabel."""
+def _is_authorized():
     authorization = request.authorization
     if authorization is None or not verify_user(**authorization):
         abort(403)
+
+
+@api.route('/models/all')
+def model_list():
+    """Return model list availabel."""
+    _is_authorized()
 
     kwargs = {
         'task': 'read-only',
@@ -37,9 +41,7 @@ def model_list():
 
 @api.route('/register/model', methods=['POST'])
 def register_model():
-    authorization = request.authorization
-    if authorization is None or not verify_user(**authorization):
-        abort(403)
+    _is_authorized()
 
     kwargs = {
         'task': 'register',
@@ -72,9 +74,7 @@ def register_model():
 
 @api.route('/model/<int:model_id>')
 def get_model_info(model_id):
-    authorization = request.authorization
-    if authorization is None or not verify_user(**authorization):
-        abort(403)
+    _is_authorized()
 
     kwargs = {
         'task': 'read-only',
@@ -119,15 +119,18 @@ def predict_question_type():
 
 @api.route('/logs/requests', methods=['GET', 'POST'])
 def extract_requests_logs():
-    authorization = request.authorization
-    if authorization is None or not verify_user(**authorization):
-        abort(403)
+    _is_authorized()
 
     logs = RequestLog.query()
 
     if request.method == 'POST':
         q_type = request.values.get('question_type')
-        logs = logs.filter(RequestLog.question_type.has(type=q_type))
+        if q_type:
+            logs = logs.filter(RequestLog.question_type.has(type=q_type))
+        
+        img_id = request.values.get('image_id')
+        if img_id:
+            logs = logs.filter(RequestLog.image_id==img_id)
 
     kwargs = {
         'task': 'read-only',
@@ -141,11 +144,26 @@ def extract_requests_logs():
     return response
 
 
+@api.route('/logs/request/<int:req_id>')
+def extract_requst_log(req_id):
+    _is_authorized()
+
+    log = RequestLog.get(req_id)
+    kwargs = {
+        'task': 'read-only',
+        'type': 'request log',
+        'done': True
+    }
+
+    response = jsonify(data=log.to_dict(),
+                       **kwargs)
+    response.status_code = 200
+    return response
+
+
 @api.route('/logs/predictions', methods=['GET', 'POST'])
 def extract_prediction_logs():
-    authorization = request.authorization
-    if authorization is None or not verify_user(**authorization):
-        abort(403)
+    _is_authorized()
 
     scores = PredictionScore.query()
 
@@ -177,9 +195,7 @@ def extract_prediction_logs():
 
 @api.route('/updates/all')
 def update_list():
-    authorization = request.authorization
-    if authorization is None or not verify_user(**authorization):
-        abort(403)
+    _is_authorized()
 
     kwargs = {
         'task': 'read-only',
@@ -195,9 +211,7 @@ def update_list():
 
 @api.route('/update/register', methods=['POST'])
 def add_update():
-    authorization = request.authorization
-    if authorization is None or not verify_user(**authorization):
-        abort(403)
+    _is_authorized()
 
     content = request.values.get('content')
     u = Update(content=content)
@@ -224,9 +238,7 @@ def add_update():
 
 @api.route('/references/all')
 def reference_list():
-    authorization = request.authorization
-    if authorization is None or not verify_user(**authorization):
-        abort(403)
+    _is_authorized()
 
     kwargs = {
         'task': 'read-only',
@@ -242,9 +254,7 @@ def reference_list():
 
 @api.route('/reference/register', methods=['POST'])
 def add_reference():
-    authorization = request.authorization
-    if authorization is None or not verify_user(**authorization):
-        abort(403)
+    _is_authorized()
 
     c = Citation(author=request.values.get('author'),
                  title=request.values.get('title'),

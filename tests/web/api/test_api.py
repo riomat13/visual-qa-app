@@ -14,7 +14,7 @@ from main.settings import set_config
 set_config('test')
 
 from main.web.app import create_app
-from main.orm.db import Base, engine
+from main.orm.db import Base, reset_db
 from main.orm.models.base import User
 from main.orm.models.ml import RequestLog, MLModel, PredictionScore, QuestionType
 from main.orm.models.data import Image, Question
@@ -188,10 +188,7 @@ class ExtractRequestLogsTest(_Base):
         model.to_dict.return_value = {'key': 'test'}
         size = 4
 
-        mock_all = Mock()
-        mock_all.return_value = [model] * size
-
-        mock_query.return_value.all = mock_all
+        mock_query.return_value.all.return_value = [model] * size
 
         # TODO: filter by question type
         response = self.client.get('/api/logs/requests')
@@ -210,11 +207,9 @@ class ExtractRequestLogsTest(_Base):
         size = 4
 
         # mocking query
-        mock_all = Mock()
-        mock_all.return_value = [model] * size
-        mock_filter = Mock()
-        mock_filter.return_value.all = mock_all
-        mock_query.return_value.filter = mock_filter
+        mock_query.return_value \
+                .filter.return_value \
+                .all.return_value = [model] * size
 
         # TODO: filter by question type
         response = self.client.post('/api/logs/requests',
@@ -270,6 +265,20 @@ class ExtractRequestLogsTest(_Base):
         )
         data = response.json.get('data')
         self.assertEqual(len(data), target_size)
+
+
+class ExtractRequestLogTest(_Base):
+
+    @patch('main.web.api._api.RequestLog')
+    def test_extract_log_by_id(self, mock_log):
+        mock_log.get.return_value.to_dict.return_value = 'test'
+        target_id = 10
+        response = self.client.get(f'/api/logs/request/{target_id}')
+        self.assertEqual(response.status_code, 200)
+        data = response.json.get('data')
+
+        mock_log.get.assert_called_once_with(target_id)
+        self.assertEqual('test', data)
 
 
 class ExtractPredictionScoreLogsTest(_Base):
@@ -368,6 +377,7 @@ class UpdateItemTest(_Base):
 
     def test_register_new_update(self):
         size = 4
+        init_size = Update.query().count()
         for i in range(4):
             with self.subTest(i=i):
                 res = self.client.post(
@@ -377,7 +387,7 @@ class UpdateItemTest(_Base):
                 self.assertEqual(res.status_code, 200)
                 self.assertTrue(res.json.get('done'))
 
-        self.assertEqual(Update.query().count(), size)
+        self.assertEqual(Update.query().count(), size+init_size)
 
     def test_fail_to_register_update(self):
         res = self.client.post(
@@ -392,6 +402,7 @@ class CitationItemTest(_Base):
 
     def test_extract_references(self):
         size = 4
+        init_size = Citation.query().count()
         for i in range(size):
             Citation(author='tester',
                      title=f'test {i}',
@@ -401,10 +412,11 @@ class CitationItemTest(_Base):
         self.assertEqual(res.status_code, 200)
         self.assertTrue(res.json.get('done'))
         data = res.json.get('data')
-        self.assertEqual(len(data), size)
+        self.assertEqual(len(data), size+init_size)
 
     def test_register_new_citation(self):
         size = 4
+        init_size = Citation.query().count()
         for i in range(4):
             with self.subTest(i=i):
                 res = self.client.post(
@@ -415,7 +427,7 @@ class CitationItemTest(_Base):
                 self.assertEqual(res.status_code, 200)
                 self.assertTrue(res.json.get('done'))
 
-        self.assertEqual(Citation.query().count(), size)
+        self.assertEqual(Citation.query().count(), size+init_size)
 
     def test_fail_to_register_citation(self):
         res = self.client.post(
