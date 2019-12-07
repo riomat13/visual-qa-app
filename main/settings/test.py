@@ -16,3 +16,5 @@ class TestConfig(Config):
     DATABASE_URI = 'sqlite:////tmp/tmp-app-test.db'
 
     TEST_UPLOAD_DIR = os.path.join(ROOT_DIR, 'tests/data/uploaded')
+    UPLOAD_DIR = 'media/tmp/uploaded'
+    FIG_DIR = 'media/tmp/figs'

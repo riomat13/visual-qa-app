@@ -67,7 +67,7 @@ class Config(object):
             'path': os.path.join(ROOT_DIR, 'checkpoints', 'what'),
             'ans_length': 7,
             'vocab_size': 20000,
-            'embedding_dim': 256,
+            'embedding_dim': 512,
             'units': 512,
         },
         'WHERE': {
@@ -120,8 +120,9 @@ class Config(object):
     }
 
     # upload directory
-    UPLOAD_DIR = os.path.join(ROOT_DIR, 'main/web/static/media/uploaded')
-    FIG_DIR = os.path.join(ROOT_DIR, 'main/web/static/media/figs')
+    STATIC_DIR = os.path.join(ROOT_DIR, 'main/web/static')
+    UPLOAD_DIR = 'media/uploaded'
+    FIG_DIR = 'media/figs'
 
     # Database settings
     DATABASE_HOST = os.environ.get('DATABASE_HOST', 'localhost')

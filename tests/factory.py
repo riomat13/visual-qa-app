@@ -93,7 +93,7 @@ class ImageFactory(object):
 
         img_file = self._test_files.pop()
         filename = os.path.basename(img_file)
-        target_path = os.path.join(TestConfig.UPLOAD_DIR, filename)
+        target_path = os.path.join(TestConfig.STATIC_DIR, TestConfig.UPLOAD_DIR, filename)
 
         # if not exist, copy image to actual directory
         if not os.path.isfile(target_path):

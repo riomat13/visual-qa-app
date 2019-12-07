@@ -7,7 +7,6 @@ import os.path
 import numpy as np
 import matplotlib.pyplot as plt
 
-from main.settings import Config
 from main.utils.loader import load_image_simple
 from main.orm.models.ml import RequestLog
 from main.orm.models.data import WeightFigure
@@ -25,7 +24,8 @@ def save_figure(fig, log=None):
     Return:
         int: the figure ID in DB
     """
-    base = Config.FIG_DIR
+    from main.settings import Config
+    base = os.path.join(Config.STATIC_DIR, Config.FIG_DIR)
 
     # automatically generate new file name
     w = WeightFigure(log=log)

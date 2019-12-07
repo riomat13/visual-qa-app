@@ -69,10 +69,14 @@ class PredictionModelTest(unittest.TestCase):
         target = 'test'
         mock_y_n.return_value = ([0], None)
 
-        res, w = model.predict('test', '')
+        res, w, pred_id = model.predict('test', '')
         mock_qtype.assert_called_once_with(sequence)
         mock_y_n.assert_called_once_with(sequence, '')
         self.assertEqual(res, 'yes')
+
+        # should be the same as given type
+        self.assertEqual(pred_id, 0)
+
         # yes/no does not return weights
         self.assertIsNone(w)
 

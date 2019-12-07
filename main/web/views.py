@@ -58,7 +58,7 @@ def logout():
 
 @base.route('/prediction', methods=['GET', 'POST'])
 def prediction():
-    filename = session.get('image', None)
+    filepath = session.get('image', None)
     question = None
     pred = None
     figpath = None
@@ -71,15 +71,15 @@ def prediction():
             question = form.question.data
             form.question.data = ''
 
-            if filename is None:
+            if filepath is None:
                 flash('Image is not provided')
                 return redirect(url_for('base.prediction'))
 
             Question(question=question).save()
-            path = os.path.join(Config.UPLOAD_DIR, filename)
+            path = os.path.join(Config.STATIC_DIR, f'{filepath}')
             pred, fig_id = asyncio.run(run_model(path, question))
-            fig = WeightFigure.get(fig_id)
-            if fig is not None:
+            if fig_id > 0:
+                fig = WeightFigure.get(fig_id)
                 figfile = fig.filename
                 figpath = os.path.join(Config.FIG_DIR, figfile)
 
@@ -89,23 +89,24 @@ def prediction():
             f = request.files['file']
             # save a file to be saved safely in file system
             filename = secure_filename(f.filename)
+            filepath = os.path.join(Config.UPLOAD_DIR, filename)
             Image(filename=filename).save()
             
             if not filename:
                 return redirect(url_for('base.prediction'))
 
             # save file name to predict
-            session['image'] = filename
+            session['image'] = filepath
 
             # save image data for later investigation
-            f.save(os.path.join(Config.UPLOAD_DIR, f'{filename}'))
+            f.save(os.path.join(Config.STATIC_DIR, f'{filepath}'))
     else:
         # clear when re-enter the page
         if 'image' in session:
             session.pop('image')
 
     return render_template('prediction.html',
-                           filename=filename,
+                           filepath=filepath,
                            question=question,
                            prediction=pred,
                            figpath=figpath,

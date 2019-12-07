@@ -94,6 +94,7 @@ class PredictionModel(BaseModel):
                 pred = 'no'
             else:
                 pred = 'Sorry, could not understand the question'
+                pred_id = -1
         elif pred_id == 1:
             pred, w = predict_what(sequence, img_path)
             pred = pred.numpy()[0]
@@ -132,6 +133,7 @@ class PredictionModel(BaseModel):
         # TODO: add couting model
         if not pred:
             pred = 'Sorry, could not understand the question'
+            pred_id = -1
         return pred, w, pred_id
 
     @classmethod
@@ -226,9 +228,9 @@ def _get_what_model():
             cfg = Config.MODELS['WHAT']
             model = QuestionAnswerModel(
                 units=cfg.get('units'),
+                seq_length=15,
                 ans_length=7,
                 vocab_size=cfg.get('vocab_size'),
-                embedding_dim=cfg.get('embedding_dim'),
                 model_type='WHAT'
             )
 
@@ -274,7 +276,6 @@ def convert_output_to_sentence(sequence):
     return ' '.join(result)
 
 
-# TODO: temporary prediction function
 def predict_question_type(sequence):
     model = _get_q_type_model()
 
@@ -284,11 +285,24 @@ def predict_question_type(sequence):
     return pred
 
 
-def predict_yes_or_no(sequence, img_path):
-    model = _get_y_n_model()
+def encode_image(img_path):
     img = load_image(img_path)
     img = tf.reshape(img, (1, 224, 224, 3))
     img = img_encoder(img)
+    return img
+
+
+def run_sequence_generate_model(model_type, model, sequence, img):
+    x = np.array([processor.word_index['<bos>']])
+    hidden = np.zeros((1, Config.MODELS.get(model_type.upper()).get('units', 512)))
+
+    pred, weights = model(x, sequence, img, hidden)
+    return pred, weights
+
+
+def predict_yes_or_no(sequence, img_path):
+    model = _get_y_n_model()
+    img = encode_image(img_path)
 
     # predicted result shape is (1, 3)
     pred, weights = model(sequence, img)
@@ -298,12 +312,7 @@ def predict_yes_or_no(sequence, img_path):
 
 def predict_what(sequence, img_path):
     model = _get_what_model()
-    img = load_image(img_path)
-    img = tf.reshape(img, (1, 224, 224, 3))
-    img = img_encoder(img)
+    img = encode_image(img_path)
 
-    x = np.array([processor.word_index['<bos>']])
-    hidden = np.zeros((1, 256))
-
-    pred, weights = model(x, sequence, img, hidden)
+    pred, weights = run_sequence_generate_model('WHAT', model, sequence, img)
     return pred, weights

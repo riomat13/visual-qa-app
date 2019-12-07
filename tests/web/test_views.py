@@ -14,6 +14,7 @@ from flask import g
 from main.settings import set_config
 set_config('test')
 
+from main.settings import Config
 from main.web.app import create_app
 from main.orm.db import Base
 from main.orm.models.base import User
@@ -168,13 +169,15 @@ class PredictionTest(_Base):
         self.assertEqual(response.status_code, 200)
         mock_img_save.assert_called_once()
 
+    @patch('main.web.views.WeightFigure')
     @patch('main.web.views.Question.save')
     @patch('main.web.views.run_model')
     @patch('main.web.views.asyncio.run')
-    def test_return_with_prediction(self, mock_run, mock_run_model, mock_q_save):
+    def test_return_with_prediction(self, mock_run, mock_run_model, mock_q_save, mock_Figure):
         test_sent = 'this is test sentence'
         # mock prediction result
         mock_run.return_value = test_sent, 1000
+        mock_Figure.get.return_value.filename = 'testfile'
 
         response = self.client.post(
             '/prediction',
@@ -202,10 +205,15 @@ class PredictionTest(_Base):
 
         data = response.data.decode()
 
+        # check page contents
         self.assertEqual(response.status_code, 200)
         self.assertIn('some question', data)
         self.assertIn(test_sent, data)
+
+        # question should be stored in db
         mock_q_save.assert_called_once()
+        # called by returned id
+        mock_Figure.get.assert_called_once_with(1000)
 
     @patch('main.web.views.Question.save')
     @patch('main.web.views.run_model')

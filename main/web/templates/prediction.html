@@ -15,8 +15,8 @@
       <input type="file" name="file">
       <input type="submit" name="action" value="upload">
   </form>
-  {% if filename %}
-    <img src="/static/media/uploaded/{{ filename }}" alt="Loaded Image" height="224">
+  {% if filepath %}
+    <img src="{{ url_for('static', filename=filepath) }}" alt="Loaded Image" height="224">
   {% endif %}
   <div id="question-form">
     <form method="POST">
@@ -36,7 +36,7 @@
   <p>Question: {{ question }}</p>
   <p>Answer: {{ prediction }}</p>
   {% if figpath %}
-  <img src="{{ figpath }}">
+  <img src="{{ url_for('static', filename=figpath) }}">
   {% endif %}
   {% endif %}
 </div>
