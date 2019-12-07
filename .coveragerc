@@ -10,6 +10,8 @@ omit =
     main/models/_models.py
     main/models/common.py
     main/utils/__init__.py
+    # tasks are built by utils
+    main/tasks/*
     tests/*
 exclude_lines =
     def __repr__
