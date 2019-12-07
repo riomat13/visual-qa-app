@@ -20,8 +20,8 @@
           </div>
           <div class="login-menu-content">
             {% if g.user.is_admin %}
-            <a href="{{ url_for('base.update_register') }}">Updates</a>
-            <a href="{{ url_for('base.ref_register') }}">References</a>
+            <a href="{{ url_for('base.list_update_items_all') }}">Updates</a>
+            <a href="{{ url_for('base.list_ref_items_all') }}">References</a>
             {% endif %}
             <a href="{{ url_for('base.logout') }}">Logout</a>
           </div>

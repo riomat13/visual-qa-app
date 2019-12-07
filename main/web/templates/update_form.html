@@ -5,14 +5,25 @@
 <div class="edit-form">
   <form method="POST">
     {{ form.hidden_tag() }}
-    <div class="col-25">
-      {{ form.content.label(class_="form-label") }}
-    </div>
-    <div class="col-75">
-      {{ form.content(class_="form-input") }}
+    <div class="row form-row">
+      <div class="col-25">
+        {{ form.content.label(class_="form-label") }}
+      </div>
+      <div class="col-75">
+        {{ form.content(class_="form-input") }}
+      </div>
     </div>
     <div class="row form-row">
-      {{ form.submit(id="edit-submit-btn", class_="btn btn-md btn-success") }}
+      <div class="col-25">
+        {{ form.summary.label(class_="form-label") }}
+      </div>
+      <div class="col-75">
+        {{ form.summary(class_="form-input", rows="10", cols="50") }}
+      </div>
+    </div>
+    <div class="row form-btn-group">
+      <a href="{{ url_for('base.list_update_items_all') }}" class="btn btn-md btn-default">Back</a>
+      {{ form.submit(class_="btn btn-md btn-success") }}
     </div>
   </form>
 </div>

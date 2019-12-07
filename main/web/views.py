@@ -161,6 +161,7 @@ def update_edit(item_id):
         update.content = form.content.data
         update.save()
         return redirect(url_for('base.note'))
+    form.content.data = update.content
     return render_template('update_form.html', form=form)
 
 
@@ -212,6 +213,12 @@ def ref_edit(ref_id):
         cite.url = form.url.data
         cite.save()
         return redirect(url_for('base.note'))
+
+    # set initial values
+    form.author.data = cite.author
+    form.title.data = cite.title
+    form.year.data = cite.year
+    form.url.data = cite.url
     return render_template('citation_form.html', form=form)
 
 
