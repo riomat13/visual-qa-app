@@ -75,7 +75,7 @@ def fetch_question_types(data_dir=None):
         for line in f:
             classes.append(line.strip())
 
-    log.info('Total Number of Classes:', len(classes))
+    log.info(f'Total Number of Classes: {len(classes)}')
     return classes
 
 
