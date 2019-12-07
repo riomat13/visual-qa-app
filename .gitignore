@@ -25,6 +25,9 @@ log*.txt
 *.cfg
 *.conf
 
+# celery
+celerybeat-schedule
+
 # Unittest
 .coverage
 
