@@ -24,6 +24,21 @@ class Config(object):
         b'\x93P\x8d\xaa8d\xce\xa1J\xca\x1d\xea\x88r\xfbH~\xfd\xb81f\xb3\xc3$'
     )
 
+    # celery
+    CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379')
+    CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://localhost:6379')
+    CELERY_IMPORTS = 'main.tasks'
+
+    # Mail settings
+    MAIL_SERVER = os.environ.get('MAIL_SERVER')
+    MAIL_PORT = os.environ.get('MAIL_PORT', 567)
+    MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
+    MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
+    MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER')
+
+    # file server
+    FILE_SERVER_URL = os.environ.get('FILE_SERVER_URL')
+
     # prediction server
     MODEL_SERVER = {
         'host': 'localhost',
@@ -106,6 +121,7 @@ class Config(object):
 
     # upload directory
     UPLOAD_DIR = os.path.join(ROOT_DIR, 'main/web/static/media/uploaded')
+    FIG_DIR = os.path.join(ROOT_DIR, 'main/web/static/media/figs')
 
     # Database settings
     DATABASE_HOST = os.environ.get('DATABASE_HOST', 'localhost')
