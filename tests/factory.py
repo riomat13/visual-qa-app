@@ -79,7 +79,6 @@ class PredictionScoreFactory(object):
         log = qtype_factory()
         predicted_time = fake.past_date(start_date='-30d')
         return PredictionScore(prediction=prediction,
-                               log_id=log.id,
                                predicted_time=predicted_time)
 
 
@@ -130,11 +129,11 @@ def generate_fake_logs(n=1):
     score_factory = PredictionScoreFactory()
 
     for _ in range(n):
-        req = request_log_factory()
-        req.save()
         pred = score_factory()
-        pred.log_id = req.id
         pred.save()
+        req = request_log_factory()
+        req.score_id = pred.id
+        req.save()
 
 
 def generate_fake_notes(n=1):

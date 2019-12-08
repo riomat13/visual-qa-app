@@ -120,6 +120,7 @@ class RequestLog(ModelLogMixin, BaseMixin, Base):
     fig = relationship('WeightFigure', back_populates='log')
 
     # predicted score and model
+    score_id = Column(Integer, ForeignKey('prediction_score.id'))
     score = relationship('PredictionScore', back_populates='log')
     model_id = Column(Integer, ForeignKey('prediction_model.id'))
     model = relationship('PredictionModel', back_populates='log')
@@ -131,6 +132,8 @@ class RequestLog(ModelLogMixin, BaseMixin, Base):
             'log_text': self.log_text,
             'question_type_id': self.question_type_id,
             'image_id': self.image_id,
+            'question_id': self.question_id,
+            'fig_id': self.fig_id,
             'model_id': self.model_id,
         }
 
@@ -151,16 +154,14 @@ class PredictionScore(BaseMixin, Base):
 
     predicted_time = Column(DateTime, default=datetime.utcnow())
 
-    log_id = Column(Integer, ForeignKey('request_log.id'))
-    log = relationship('RequestLog', back_populates='score')
+    log = relationship('RequestLog', back_populates='score', uselist=False)
 
-    def __init__(self, prediction, log_id, rate=None, **kwargs):
+    def __init__(self, prediction, rate=None, **kwargs):
         """Predicted score.
 
         Args:
             prediction: str
                 predicted answer
-            log_id: RequestLog model
             rate(optional): int
                 rate the result, 1 - 5
             question_type(optional): str
@@ -173,7 +174,6 @@ class PredictionScore(BaseMixin, Base):
             if not 0 < rate < 6:
                 raise ValueError('Rate must be chosen from 1 to 5')
         super(PredictionScore, self).__init__(prediction=prediction,
-                                              log_id=log_id,
                                               rate=rate,
                                               **kwargs)
 

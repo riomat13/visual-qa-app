@@ -8,6 +8,7 @@ from flask import abort, jsonify, request, session
 
 from . import api
 from main.orm.models.ml import MLModel, RequestLog, PredictionScore, QuestionType
+from main.orm.models.data import Image, Question, WeightFigure
 from main.orm.models.web import Update, Citation
 from main.models.client import run_model
 from main.web.auth import verify_user
@@ -161,17 +162,39 @@ def extract_requst_log(req_id):
     return response
 
 
+@api.route('/logs/qa/<int:req_id>')
+def extract_qa_by_request_log(req_id):
+    _is_authorized()
+
+    log = RequestLog.get(req_id)
+    kwargs = {
+        'task': 'read-only',
+        'type': 'request log',
+        'done': True
+    }
+
+    data = {
+        'request_id': req_id,
+        'question': Question.get(log.question_id).question,
+        'prediction': log.score.prediction,
+        'image': Image.get(log.image_id).filename,
+        'figure': WeightFigure.get(log.fig_id).filename,
+    }
+
+    response = jsonify(data=data, **kwargs)
+    response.status_code = 200
+    return response
+
+
 @api.route('/logs/predictions', methods=['GET', 'POST'])
 def extract_prediction_logs():
     _is_authorized()
 
-    scores = PredictionScore.query()
+    logs = RequestLog.query()
 
     if request.method == 'POST':
         q_type = request.values.get('question_type')
-        scores = scores.outerjoin(PredictionScore.log).filter(
-            RequestLog.question_type.has(type=q_type)
-        )
+        logs = logs.filter(RequestLog.question_type.has(type=q_type))
 
     kwargs = {
         'task': 'read-only',
@@ -181,13 +204,13 @@ def extract_prediction_logs():
 
     response = jsonify(data=[
         {
-            'rate': log.rate,
-            'prediction': log.prediction,
-            'probability': log.probability,
-            'answer': log.answer,
-            'predicted_time': log.predicted_time,
-            'log_id': log.log_id
-        } for log in scores.all()],
+            'request_id': log.id,
+            'rate': log.score.rate,
+            'prediction': log.score.prediction,
+            'probability': log.score.probability,
+            'answer': log.score.answer,
+            'predicted_time': log.score.predicted_time,
+        } for log in logs.all() if log.score is not None],
         **kwargs)
     response.status_code = 200
     return response

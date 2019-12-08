@@ -267,7 +267,7 @@ class ExtractRequestLogsTest(_Base):
         self.assertEqual(len(data), target_size)
 
 
-class ExtractRequestLogTest(_Base):
+class ExtractSingleRequestLogTest(_Base):
 
     @patch('main.web.api._api.RequestLog')
     def test_extract_log_by_id(self, mock_log):
@@ -280,27 +280,55 @@ class ExtractRequestLogTest(_Base):
         mock_log.get.assert_called_once_with(target_id)
         self.assertEqual('test', data)
 
+    @patch('main.web.api._api.WeightFigure')
+    @patch('main.web.api._api.Image')
+    @patch('main.web.api._api.Question')
+    @patch('main.web.api._api.RequestLog')
+    def test_extract_log_data_by_id(self, mock_log, mock_q, mock_img, mock_fig):
+        Log = namedtuple('RequestLog', 'question_id,image_id,fig_id,score')
+        mock_score = Mock()
+        mock_score.prediction = 'test_prediction'
+        log = Log(1, 1, 1, mock_score)
+        mock_log.get.return_value = log
+        mock_q.get.return_value.question = 'test_question'
+        mock_img.get.return_value.filename = 'test_image'
+        mock_fig.get.return_value.filename = 'test_fig'
+
+        target_id = 10
+        response = self.client.get(f'/api/logs/qa/{target_id}')
+        self.assertEqual(response.status_code, 200)
+        data = response.json.get('data')
+
+        mock_log.get.assert_called_once_with(target_id)
+        self.assertEqual(target_id, data.get('request_id'))
+        self.assertEqual('test_question', data.get('question'))
+        self.assertEqual('test_prediction', data.get('prediction'))
+        self.assertEqual('test_image', data.get('image'))
+        self.assertEqual('test_fig', data.get('figure'))
+
 
 class ExtractPredictionScoreLogsTest(_Base):
 
-    @patch('main.web.api._api.PredictionScore.query')
+    @patch('main.web.api._api.RequestLog.query')
     def test_extract_all_scores(self, mock_query):
         size = 4
 
-        Log = namedtuple(
-            'TestLog',
-            'rate, prediction, probability, answer, predicted_time, log_id, log'
+        Score = namedtuple(
+            'PredictionScore',
+            'rate,prediction,probability,answer,predicted_time,log'
         )
-        log = Log(**{'rate': 1,
-                     'prediction': 'test',
-                     'probability': 0.4,
-                     'answer': 'test',
-                     'predicted_time': '',
-                     'log_id': 1,
-                     'log': None})
+        Request = namedtuple('RequestLog', 'id,score')
 
-        mock_all = Mock(PredictionScore)
-        mock_all.return_value = [log] * size
+        mock_all = Mock(RequestLog)
+        mock_all.return_value = \
+            [Request(id=i+1,
+                     score=Score(**{'rate': 1,
+                                    'prediction': 'test',
+                                    'probability': 0.4,
+                                    'answer': 'test',
+                                    'predicted_time': '',
+                                    'log': None}))
+                for i in range(size)]
         mock_query.return_value.all = mock_all
 
         # send request and extract data
@@ -310,7 +338,8 @@ class ExtractPredictionScoreLogsTest(_Base):
 
         self.assertEqual(len(data), size)
 
-        for log in data:
+        for id_, log in enumerate(data, 1):
+            self.assertEqual(log.get('request_id'), id_)
             self.assertEqual(log.get('prediction'), 'test')
 
     def test_extract_scores_by_question_type(self):
@@ -329,9 +358,12 @@ class ExtractPredictionScoreLogsTest(_Base):
         question.save()
 
         for i in range(target_size):
+            score = PredictionScore(prediction='pred')
+            score.save()
             RequestLog(question_type=target_qtype,
                        question_id=question.id,
                        image_id=img.id,
+                       score_id=score.id,
                        log_type='test',
                        log_text=f'this is test {i}').save()
 
@@ -340,11 +372,9 @@ class ExtractPredictionScoreLogsTest(_Base):
             RequestLog(question_type=dummy_qtype,
                        question_id=question.id,
                        image_id=img.id,
+                       score_id=score.id,
                        log_type='test',
                        log_text=f'this is dummy {i}').save()
-
-        for log in RequestLog.query().all():
-            PredictionScore(log_id=log.id, prediction='pred').save()
 
         # send request and extract data
         response = self.client.post(
