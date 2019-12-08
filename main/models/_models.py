@@ -217,7 +217,7 @@ class QuestionAnswerModel(tf.keras.Model):
 
         # models
         # encoding questions and images
-        encoder = QuestionImageEncoder(units, vocab_size, units)
+        encoder = SimpleQuestionImageEncoder(units, vocab_size, units)
 
         # generating words
         generator_model = SequenceGeneratorModel(units,
