@@ -46,6 +46,8 @@ def make_celery(app):
 app = create_app('test')
 celery = make_celery(app)
 
+from .images import image_process_task
+
 
 if __name__ == '__main__':
     celery.start()
