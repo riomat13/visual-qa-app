@@ -11,7 +11,8 @@ preprocess*.py
 # data / database
 media/
 data/
-checkpoints/
+checkpoint
+weights*
 */migrations/versions/
 
 # logs
