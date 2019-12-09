@@ -14,7 +14,7 @@ from main.web.forms import UserForm, QuestionForm, UpdateForm, CitationForm
 from main.web.auth import verify_user, login_required
 from main.models.client import run_model
 from main.orm.models.web import Update, Citation
-from main.orm.models.data import Image, Question, WeightFigure
+from main.orm.models.data import WeightFigure
 
 log = logging.getLogger(__name__)
 
@@ -75,7 +75,6 @@ def prediction():
                 flash('Image is not provided')
                 return redirect(url_for('base.prediction'))
 
-            Question(question=question).save()
             path = os.path.join(Config.STATIC_DIR, f'{filepath}')
             pred, fig_id = asyncio.run(run_model(path, question))
             if fig_id > 0:
@@ -90,7 +89,6 @@ def prediction():
             # save a file to be saved safely in file system
             filename = secure_filename(f.filename)
             filepath = os.path.join(Config.UPLOAD_DIR, filename)
-            Image(filename=filename).save()
             
             if not filename:
                 return redirect(url_for('base.prediction'))

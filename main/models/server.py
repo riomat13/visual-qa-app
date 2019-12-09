@@ -76,15 +76,17 @@ async def run_prediction(reader, writer):
         img.save()
         q = Question(question=sentence)
         q.save()
+
+        if kwargs.get('log_type') == 'success':
+            pred_log = PredictionScore(prediction=pred)
+            pred_log.save()
+
         log_model = RequestLog(image_id=img.id,
                                question_id=q.id,
                                fig_id=fig_id,
+                               score_id=pred_log.id,
                                **kwargs)
         log_model.save()
-        if kwargs.get('log_type') == 'success':
-            pred_log = PredictionScore(prediction=pred,
-                                       log_id=log_model.id)
-            pred_log.save()
 
         writer.write(pred.encode())
         await writer.drain()
