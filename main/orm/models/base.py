@@ -7,7 +7,7 @@ from sqlalchemy import Column, String, Boolean, DateTime, Text
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from main.orm.db import Base
-from main.mixins.models import BaseMixin
+from main.mixins.models import BaseMixin, BaseLogMixin
 
 
 class User(BaseMixin, Base):
@@ -30,16 +30,8 @@ class User(BaseMixin, Base):
         return check_password_hash(self.password_hash, password)
 
 
-class AppLog(BaseMixin, Base):
+class AppLog(BaseLogMixin, BaseMixin, Base):
     __tablename__ = 'app_log'
-
-    logged_time = Column(DateTime, default=datetime.utcnow())
-    # Log Type: e.g. Info, Warning, Error
-    log_type = Column(String(32), nullable=False)
-    # class name if error. e.g. ValueError
-    log_class = Column(String(32), nullable=True)
-    # Log Detail
-    log_text = Column(Text, nullable=False)
 
     @classmethod
     def fetch_logs(cls, log_type=None, log_class=None, log_time=None):

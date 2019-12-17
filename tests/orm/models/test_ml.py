@@ -184,28 +184,9 @@ class PredictionScoreTest(_Base):
     def setUp(self):
         super(PredictionScoreTest, self).setUp()
 
-        self.qtype = QuestionType(type='testcase')
-        self.qtype.save()
-
-        q = Question(question='is this test')
-        q.save()
-        self.question_id = q.id
-
-        img = Image(filename='test.jpg')
-        img.save()
-        self.img_id = img.id
-
         self.test_predict = 'some result'
-        log = RequestLog(
-            question_type=self.qtype,
-            question_id=self.question_id,
-            image_id=self.img_id,
-            log_type='success',
-            log_text=SAMPLE_TEXT)
-        log.save()
 
         pred = PredictionScore(prediction=self.test_predict,
-                               log_id=log.id,
                                rate=1)
         pred.save()
         self.id = pred.id
@@ -215,9 +196,6 @@ class PredictionScoreTest(_Base):
 
         # check saved properly
         self.assertEqual(data.prediction, self.test_predict)
-
-        # check make relationship with log
-        self.assertEqual(data.log.log_text, SAMPLE_TEXT)
 
     def test_update_score_information(self):
         data = PredictionScore.get(self.id)
@@ -234,12 +212,10 @@ class PredictionScoreTest(_Base):
     def test_handle_out_of_range_rate(self):
         with self.assertRaises(ValueError):
             PredictionScore(prediction='invalid',
-                            log_id=1,
                             rate=10)
 
         with self.assertRaises(ValueError):
             PredictionScore(prediction='invalid',
-                            log_id=1,
                             rate=0)
 
 

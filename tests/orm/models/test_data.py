@@ -28,9 +28,6 @@ class ImageModelTest(_Base):
         img = Image(filename=fname)
         img.save()
 
-        # before update, no data is stored
-        self.assertIsNone(img.original)
-
         img.update()
 
         target = f'{img.id:05d}.jpg'

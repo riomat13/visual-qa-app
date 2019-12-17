@@ -59,7 +59,7 @@ class BaseMixin(object):
         return _serialize(self)
 
 
-class ModelLogMixin(object):
+class BaseLogMixin(object):
 
     logged_time = Column(DateTime, default=datetime.utcnow())
     # Log Type: e.g. Info, Warning, Error
@@ -68,6 +68,9 @@ class ModelLogMixin(object):
     log_class = Column(String(32), nullable=True)
     # Log Detail
     log_text = Column(Text, nullable=False)
+
+
+class ModelLogMixin(BaseLogMixin):
 
     @declared_attr
     def model_id(cls):

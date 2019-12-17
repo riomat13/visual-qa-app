@@ -106,10 +106,6 @@ class RequestLog(ModelLogMixin, BaseMixin, Base):
     """Logs when got request to predict."""
     __tablename__ = 'request_log'
 
-    # TODO: uncomment after store model data to db
-    #model_id = Column(Integer, ForeignKey('prediction_model.id'))
-    #model = relationship('PredictionModel')
-
     question_type_id = Column(Integer, ForeignKey('question_type.id'))
     question_type = relationship('QuestionType')
 
