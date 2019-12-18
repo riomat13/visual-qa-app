@@ -7,7 +7,7 @@ import logging
 from datetime import datetime
 
 from functools import partial
-import io
+import tempfile
 
 from flask import g
 
@@ -154,26 +154,24 @@ class GeneralBaseViewResponseTest(_Base):
 
 class PredictionTest(_Base):
 
-    @patch('main.web.views.Image.save')
-    def test_upload_image(self, mock_img_save):
+    def test_upload_image(self):
         # store image data into buffer temporarily
-        test_data = io.BytesIO(b'test data')
-        response = self.client.post(
-            '/prediction',
-            content_type='multipart/form-data',
-            data=dict(
-                action='upload',
-                file=(test_data, 'test.jpg')
+        with tempfile.NamedTemporaryFile() as tmp:
+            #test_data = io.BytesIO(b'test data')
+            response = self.client.post(
+                '/prediction',
+                content_type='multipart/form-data',
+                data=dict(
+                    action='upload',
+                    file=(tmp, tmp.name)
+                )
             )
-        )
         self.assertEqual(response.status_code, 200)
-        mock_img_save.assert_called_once()
 
     @patch('main.web.views.WeightFigure')
-    @patch('main.web.views.Question.save')
     @patch('main.web.views.run_model')
     @patch('main.web.views.asyncio.run')
-    def test_return_with_prediction(self, mock_run, mock_run_model, mock_q_save, mock_Figure):
+    def test_return_with_prediction(self, mock_run, mock_run_model, mock_Figure):
         test_sent = 'this is test sentence'
         # mock prediction result
         mock_run.return_value = test_sent, 1000
@@ -210,15 +208,12 @@ class PredictionTest(_Base):
         self.assertIn('some question', data)
         self.assertIn(test_sent, data)
 
-        # question should be stored in db
-        mock_q_save.assert_called_once()
         # called by returned id
         mock_Figure.get.assert_called_once_with(1000)
 
-    @patch('main.web.views.Question.save')
     @patch('main.web.views.run_model')
     @patch('main.web.views.asyncio.run')
-    def test_figure_is_passed_to_template(self, mock_run, mock_run_model, mock_q_save):
+    def test_figure_is_passed_to_template(self, mock_run, mock_run_model):
         test_sent = 'this is test sentence'
         w = WeightFigure()
         w.filename = 'testfile'
