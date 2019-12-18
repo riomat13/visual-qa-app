@@ -6,14 +6,14 @@ import warnings
 from functools import wraps
 
 from main.settings import Config
-from main.mixins.models import ModelLogMixin, BaseMixin
+from main.mixins.models import BaseLogMixin, BaseMixin
 
 
-def save_log(model):
+def save_log(logger):
 
     # check if model has required interface by inheritance
-    if not issubclass(model, ModelLogMixin) and \
-            not issubclass(model, BaseMixin):
+    if not issubclass(logger, BaseLogMixin) and \
+            not issubclass(logger, BaseMixin):
         raise TypeError('Invalid type to log model. '
                         'Make sure the model is inherit from ModelLogMixin and BaseMixin.')
 
@@ -24,15 +24,16 @@ def save_log(model):
             with warnings.catch_warnings(record=True) as w:
                 try:
                     res = func(*args, **kwargs)
-                    log = model(log_type='success',
-                                log_text='success')
+                    log = logger(log_type='success',
+                                 log_text='success')
                     log.save()
                     return res
                 except Exception as e:
-                    log = model(log_type='error',
-                                log_class=e.__class__.__name__,
-                                log_text=str(e))
+                    log = logger(log_type='error',
+                                 log_class=e.__class__.__name__,
+                                 log_text=str(e))
                     log.save()
+                    raise
 
                 finally:
                     # whether success or not, save warnings
@@ -40,9 +41,9 @@ def save_log(model):
                         text = '{}:{} {}'.format(warning.filename,
                                                  warning.lineno,
                                                  warning.message)
-                        log = model(log_type='warning',
-                                    log_class=warning.category.__name__,
-                                    log_text=text)
+                        log =  logger(log_type='warning',
+                                      log_class=warning.category.__name__,
+                                      log_text=text)
                         log.save()
         return wrapper
     return decorator

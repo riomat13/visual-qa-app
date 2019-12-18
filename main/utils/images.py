@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+import shutil
 import logging
 
 import numpy as np
@@ -32,16 +33,18 @@ def update_row_image(img_model, remove=False, *, send=False, upload=False):
 
     if send:
         # send original data via email
-        send_image(path)
+        # (only store in directory for sending)
+        keep = not remove
+        register_to_send_image(path, keep=keep)
 
-    if remove:
-        # delete old data from app
+    elif remove:
+        # delete old data from app without send data
         delete_image(path)
 
 
 def save_image(img_arr, path):
     """save processed array to file.
-    
+
     Args:
         img_arr: numpy array
             represents image to save
@@ -53,9 +56,29 @@ def save_image(img_arr, path):
     log.info(f'Image file saved: {path}')
 
 
-def send_image(path):
-    # TODO: send by email
-    pass
+def register_to_send_image(path, keep=False, by='scp'):
+    """Send image.
+    This function is only to save a file to directory and
+    other scheduled task do the job.
+
+    Args:
+        path: str
+            path to the image to send
+        keep: boolean
+            if True, keep the file
+        by: str
+            the way to send data, e.g., 'scp'
+            (currently only for scp, may add email)
+    """
+    # TODO: add email
+    if by not in ('scp',):
+        raise ValueError('Can send image via scp only')
+
+    filename = os.path.basename(path)
+    if keep:
+        shutil.copy(path, f'data/tmp/images/{filename}')
+    else:
+        shutil.move(path, f'data/tmp/images/{filename}')
 
 
 def upload_image(path):

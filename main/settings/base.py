@@ -50,7 +50,7 @@ class Config(object):
         # question type classification
         'QTYPE': {
             'path': os.path.join(ROOT_DIR, 'checkpoints', 'question_types'),
-            'seq_length': 15,
+            'seq_length': 10,
             'vocab_size': 20000,
             'embedding_dim': 256,
             'units': 64,
@@ -65,42 +65,48 @@ class Config(object):
         # TODO: adjust hyper-parameter settings for each model
         'WHAT': {
             'path': os.path.join(ROOT_DIR, 'checkpoints', 'what'),
-            'ans_length': 7,
+            'seq_length': 10,
+            'ans_length': 5,
             'vocab_size': 20000,
             'embedding_dim': 512,
             'units': 512,
         },
         'WHERE': {
             'path': os.path.join(ROOT_DIR, 'checkpoints', 'where'),
-            'ans_length': 7,
+            'seq_length': 10,
+            'ans_length': 5,
             'vocab_size': 20000,
             'embedding_dim': 256,
             'units': 512,
         },
         'WHICH': {
             'path': os.path.join(ROOT_DIR, 'checkpoints', 'which'),
-            'ans_length': 7,
+            'seq_length': 10,
+            'ans_length': 5,
             'vocab_size': 20000,
             'embedding_dim': 256,
             'units': 512,
         },
         'WHO': {
             'path': os.path.join(ROOT_DIR, 'checkpoints', 'who'),
-            'ans_length': 7,
+            'seq_length': 10,
+            'ans_length': 5,
             'vocab_size': 20000,
             'embedding_dim': 256,
             'units': 512,
         },
         'WHY': {
             'path': os.path.join(ROOT_DIR, 'checkpoints', 'why'),
-            'ans_length': 7,
+            'seq_length': 10,
+            'ans_length': 5,
             'vocab_size': 20000,
             'embedding_dim': 256,
             'units': 512,
         },
         'COUNT': {
             'path': os.path.join(ROOT_DIR, 'checkpoints', 'count'),
-            'ans_length': 7,
+            'seq_length': 10,
+            'ans_length': 5,
             'vocab_size': 20000,
             'embedding_dim': 256,
             'units': 512,
@@ -108,7 +114,8 @@ class Config(object):
         # non-categorized group
         'NONE': {
             'path': os.path.join(ROOT_DIR, 'checkpoints', 'none'),
-            'ans_length': 7,
+            'seq_length': 10,
+            'ans_length': 5,
             'vocab_size': 20000,
             'embedding_dim': 256,
             'units': 512,
@@ -123,6 +130,14 @@ class Config(object):
     STATIC_DIR = os.path.join(ROOT_DIR, 'main/web/static')
     UPLOAD_DIR = 'media/uploaded'
     FIG_DIR = 'media/figs'
+
+    # target directory to send data by tasks
+    SEND_DATA_DIR = 'data/tmp'
+    REMOTE_USERNAME = os.environ.get('REMOTE_USERNAME')
+    REMOTE_PASSWORD = os.environ.get('REMOTE_PASSWORD')
+    SSH_HOSTKEYS = os.environ.get('SSH_HOSTKEYS')
+    REMOTE_SERVER = os.environ.get('REMOTE_SERVER')
+    REMOTE_DIR = 'data/tmp/target'
 
     # Database settings
     DATABASE_HOST = os.environ.get('DATABASE_HOST', 'localhost')

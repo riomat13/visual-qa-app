@@ -36,6 +36,7 @@ class AddLogToModelTest(unittest.TestCase):
                 self.log_class = log_class
 
             def save(self):
+                # store log data to temp list
                 test_outputs.append([self.log_type, self.log_text, self.log_class])
 
         # handle error
@@ -44,7 +45,9 @@ class AddLogToModelTest(unittest.TestCase):
             raise ValueError(error_text)
 
         # should be saved the error text by ValueError
-        test_func_error()
+        with self.assertRaises(ValueError):
+            test_func_error()
+
         ltype, ltext, lcls = test_outputs.pop()
         self.assertEqual(ltype, 'error')
         self.assertEqual(ltext, error_text)
