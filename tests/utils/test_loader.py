@@ -61,9 +61,27 @@ class LoadDatasetTest(unittest.TestCase):
     def setUp(self):
         self.vqa = VQA()
 
+    def create_mock_dataset(self, data_type, num_data):
+        # make sure no error
+        if data_type not in ('questions', 'annotations'):
+            raise ValueError()
+
+        dataset = []
+        if data_type == 'questions':
+            for i, data in enumerate(JSON_DATA[data_type], 1):
+                dataset.append((i, (data['question'], 'img.jpg')))
+        else:
+            for i, data in enumerate(JSON_DATA[data_type], 1):
+                answers = [d['answer'] for d in data['answers']]
+                dataset.append((i, (data['question_type'], answers)))
+
+        return dataset
+
     @patch('main.utils.loader.json.load')
     @patch('builtins.open', new_callabel=mock_open)
     def test_load_dataset_works(self, mock_open, mock_json_load):
+        self.vqa._create_dataset = self.create_mock_dataset
+
         mock_json_load.return_value = JSON_DATA
 
         # load all data
@@ -88,10 +106,7 @@ class LoadDatasetTest(unittest.TestCase):
         ]
         self.assertEqual(data[2], target_answers)
 
-        # check image path
-        target_image = 'COCO_train2014_{:012d}.jpg' \
-            .format(JSON_DATA["questions"][0]["image_id"])
-        self.assertTrue(data[3].endswith(target_image))
+        self.assertEqual(data[3], 'img.jpg')
 
     def test_generator_raise_error(self):
         with self.assertRaises(RuntimeError):
@@ -138,6 +153,8 @@ class LoadDatasetTest(unittest.TestCase):
         self.assertEqual(len(dataset[0]), target_data_size)
 
     def test_load_dataset_and_check_datasize(self):
+        self.vqa._create_dataset = self.create_mock_dataset
+
         target_data_size = 10
         self.vqa.load_data(num_data=10)
 

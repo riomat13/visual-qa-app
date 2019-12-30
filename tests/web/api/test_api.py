@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import unittest
-from unittest.mock import patch, Mock
+from unittest.mock import patch, MagicMock
 
 import logging
 from collections import namedtuple
@@ -30,6 +30,16 @@ class _Base(unittest.TestCase):
         self.app_context = app.app_context()
         self.app_context.push()
 
+        self.client = app.test_client()
+
+    def tearDown(self):
+        self.app_context.pop()
+
+
+class AuthorizationTest(_Base):
+    def setUp(self):
+        super(AuthorizationTest, self).setUp()
+
         from main.orm.db import engine
         self.engine = engine
         Base.metadata.create_all(engine)
@@ -44,29 +54,26 @@ class _Base(unittest.TestCase):
             'Authorization': _basic_auth_str('testcase', 'pwd')
         }
 
-        client = app.test_client()
-        client.get = partial(client.get, headers=headers)
-        client.post = partial(client.post, headers=headers)
-        self.client = client
+        self.client.get = partial(client.get, headers=headers)
+        self.client.post = partial(client.post, headers=headers)
 
     def tearDown(self):
         self.app_context.pop()
         Base.metadata.drop_all(self.engine)
 
 
+@patch('main.web.api._api._is_authorized', new=MagicMock())
+@patch('main.web.api._api.MLModel')
 class ModelListTest(_Base):
 
-    @patch('main.web.api._api.MLModel')
-    def test_extracting_model_list(self, mock_model):
+    def test_extract_model_list(self, Model):
         data_size = 4
-        target = [
-            {k: v for k, v in zip('test', range(4))}
-        ]
-        mock_model.to_dict.return_value = target
+        target = {'model': 'test'}
+        m = MagicMock()
+        m.to_dict.return_value = target
         
-        mock_query = Mock()
-        mock_query.all.return_value = [mock_model for _ in range(data_size)]
-        mock_model.query.return_value = mock_query
+        Model.query.return_value.all.return_value = \
+            [m for _ in range(data_size)]
 
         response = self.client.get('/api/models/all')
 
@@ -79,20 +86,31 @@ class ModelListTest(_Base):
         for data in json_data:
             self.assertEqual(data, target)
 
-    def test_register_model(self):
+    def test_register_model(self, Model):
         model_name = 'test_model'
+        type = 'test_type'
+        category = 'test_cat'
         res = self.client.post(
             '/api/register/model',
-            data=dict(name=model_name,
-                      type='cls',
-                      category='test',
-                      module='tests.web.api',
-                      object='TestCase')
+            data=(dict(name=model_name,
+                       type=type,
+                       category=category)),
         )
-        data = MLModel.query().filter_by(name=model_name).first()
-        self.assertTrue(data)
 
-    def test_register_model_handle_invalid_input(self):
+        self.assertEqual(res.status_code, 201)
+
+        Model.assert_called_once_with(name=model_name,
+                                      type=type,
+                                      category=category,
+                                      module=None,
+                                      object=None,
+                                      path=None,
+                                      metrics=None,
+                                      score=None)
+        Model.return_value.save.assert_called_once()
+
+    def test_register_model_handle_invalid_input(self, Model):
+        Model.return_value.save.side_effect = ValueError()
         res = self.client.post(
             '/api/register/model',
             data=dict(name='test',
@@ -103,41 +121,32 @@ class ModelListTest(_Base):
         )
 
         self.assertEqual(res.status_code, 400)
-        # not successed process
-        self.assertFalse(res.json.get('done'))
         self.assertTrue('error' in res.json)
 
-        res = self.client.post(
-            '/api/register/model',
-            data=dict(name='test',
-                      type='cls',
-                      category='test',
-                      module='tests.web.invalid.module',
-                      object='TestCase')
-        )
+    def test_extract_model_info_by_id(self, Model):
+        id_ = 11
+        model_name = 'test_model'
 
-        self.assertEqual(res.status_code, 400)
-        self.assertTrue('error' in res.json)
+        m = MagicMock()
+        m.to_dict.return_value = {'name': model_name}
+        Model.get.return_value = m
 
-    def test_extract_model_info_by_id(self):
-        model_name = 'test'
-        model = MLModel(name=model_name,
-                        type='cls',
-                        category='test',
-                        module='tests.web.api',
-                        object='TestCase')
-        model.save()
+        res = self.client.get(f'/api/model/{id_}')
 
-        data = MLModel.query().filter_by(name=model_name).first()
-        res = self.client.get(f'/api/model/{data.id}')
+        self.assertEqual(res.status_code, 200)
         data = res.json.get('data')
+
         self.assertEqual(data.get('name'), model_name)
+        Model.get.assert_called_once_with(id_)
+        m.to_dict.assert_called_once()
 
         # test with non-exist id
+        Model.get.return_value = None
+
         res = self.client.get(f'/api/model/1000')
         data = res.json.get('data')
         # this must be empty
-        self.assertEqual(len(data), 0)
+        self.assertEqual(data, {})
 
 
 class QuestionTypeTest(_Base):
@@ -180,17 +189,18 @@ class QuestionTypeTest(_Base):
         self.assertTrue('message' in data)
 
 
+@patch('main.web.api._api._is_authorized', new=MagicMock())
+@patch('main.web.api._api.RequestLog')
 class ExtractRequestLogsTest(_Base):
 
-    @patch('main.web.api._api.RequestLog.query')
-    def test_extract_all_logs(self, mock_query):
-        model = Mock(RequestLog())
-        model.to_dict.return_value = {'key': 'test'}
+    def test_extract_all_logs(self, Log):
         size = 4
 
-        mock_query.return_value.all.return_value = [model] * size
+        m = MagicMock()
+        m.to_dict.return_value = {'key': 'test'}
 
-        # TODO: filter by question type
+        Log.query.return_value.all.return_value = [m] * size
+
         response = self.client.get('/api/logs/requests')
         self.assertEqual(response.status_code, 200)
         data = response.json.get('data')
@@ -200,20 +210,20 @@ class ExtractRequestLogsTest(_Base):
         for log in data:
             self.assertEqual(log.get('key'), 'test')
 
-    @patch('main.web.api._api.RequestLog.query')
-    def test_extract_question_type_logs(self, mock_query):
-        model = Mock(RequestLog)
-        model.to_dict.return_value = {'key': 'value'}
+    def test_extract_question_type_logs(self, Log):
         size = 4
 
-        # mocking query
-        mock_query.return_value \
-                .filter.return_value \
-                .all.return_value = [model] * size
+        m = MagicMock()
+        m.to_dict.return_value = {'key': 'value'}
 
-        # TODO: filter by question type
+        m1 = Log.query.return_value
+        m2 = m1.filter.return_value
+        m3 = m2.filter.return_value
+        m3.all.return_value = [m] * size
+
         response = self.client.post('/api/logs/requests',
-                                    data=dict(question_type='test'))
+                                    data=dict(image_id=1,
+                                              question_type='test'))
         self.assertEqual(response.status_code, 200)
         data = response.json.get('data')
 
@@ -222,84 +232,62 @@ class ExtractRequestLogsTest(_Base):
         for log in data:
             self.assertEqual(log.get('key'), 'value')
 
-    def test_extract_non_registered_logs(self):
+    def test_extract_non_registered_logs(self, Log):
         res = self.client.post('/api/logs/requests',
-                               data=dict(question_type='test'))
+                               data=dict(image_id=1,
+                                         question_type='test'))
         self.assertEqual(res.status_code, 200)
+
         # should return empty
         self.assertEqual(len(res.json.get('data')), 0)
 
-    def test_extract_actual_logs(self):
-        size = 5
-        target_size = 3
 
-        target_type = 'question_type'
-        target_qtype = QuestionType(type=target_type)
-        target_qtype.save()
-        dummy_qtype = QuestionType(type='dummy')
-        dummy_qtype.save()
-
-        img = Image(filename='img.jpg')
-        img.save()
-        question = Question(question='test question')
-        question.save()
-
-        for i in range(target_size):
-            RequestLog(question_type=target_qtype,
-                       question_id=question.id,
-                       image_id=img.id,
-                       log_type='test',
-                       log_text=f'this is test {i}').save()
-
-        # append type which should be filtered out
-        for i in range(size - target_size):
-            RequestLog(question_type=dummy_qtype,
-                       question_id=question.id,
-                       image_id=img.id,
-                       log_type='test',
-                       log_text=f'this is dummy {i}').save()
-
-        response = self.client.post(
-            '/api/logs/requests',
-            data=dict(question_type=target_type)
-        )
-        data = response.json.get('data')
-        self.assertEqual(len(data), target_size)
-
-
+@patch('main.web.api._api._is_authorized', new=MagicMock())
+@patch('main.web.api._api.RequestLog')
 class ExtractSingleRequestLogTest(_Base):
 
-    @patch('main.web.api._api.RequestLog')
-    def test_extract_log_by_id(self, mock_log):
-        mock_log.get.return_value.to_dict.return_value = 'test'
-        target_id = 10
-        response = self.client.get(f'/api/logs/request/{target_id}')
-        self.assertEqual(response.status_code, 200)
-        data = response.json.get('data')
+    def test_extract_log_by_id(self, Log):
+        Log.get.return_value.to_dict.return_value = 'test'
+        id_ = 10
 
-        mock_log.get.assert_called_once_with(target_id)
+        res = self.client.get(f'/api/logs/request/{id_}')
+        self.assertEqual(res.status_code, 200)
+        data = res.json.get('data')
+
+        Log.get.assert_called_once_with(id_)
         self.assertEqual('test', data)
 
     @patch('main.web.api._api.WeightFigure')
     @patch('main.web.api._api.Image')
     @patch('main.web.api._api.Question')
-    @patch('main.web.api._api.RequestLog')
-    def test_extract_log_data_by_id(self, mock_log, mock_q, mock_img, mock_fig):
-        Log = namedtuple('RequestLog', 'question_id,image_id,fig_id,score')
-        mock_score = Mock()
-        mock_score.prediction = 'test_prediction'
-        log = Log(1, 1, 1, mock_score)
-        mock_log.get.return_value = log
-        mock_q.get.return_value.question = 'test_question'
-        mock_img.get.return_value.filename = 'test_image'
-        mock_fig.get.return_value.filename = 'test_fig'
+    def test_extract_log_data_by_id(self, Q, Img, Fig, Log):
+        img_id = 1
+        q_id = 2
+        fig_id = 3
+
+        # set up mock log data
+        score = MagicMock(prediction='test_prediction')
+        log = MagicMock(image_id=img_id,
+                        question_id=q_id,
+                        fig_id=fig_id,
+                        score=score)
+
+        Log.get.return_value = log
+        Q.get.return_value.question = 'test_question'
+        Img.get.return_value.filename = 'test_image'
+        Fig.get.return_value.filename = 'test_fig'
 
         target_id = 10
-        response = self.client.get(f'/api/logs/qa/{target_id}')
-        self.assertEqual(response.status_code, 200)
-        data = response.json.get('data')
 
-        mock_log.get.assert_called_once_with(target_id)
+        res = self.client.get(f'/api/logs/qa/{target_id}')
+        self.assertEqual(res.status_code, 200)
+        data = res.json.get('data')
+
+        Log.get.assert_called_once_with(target_id)
+        Img.get.assert_called_once_with(img_id)
+        Q.get.assert_called_once_with(q_id)
+        Fig.get.assert_called_once_with(fig_id)
+
         self.assertEqual(target_id, data.get('request_id'))
         self.assertEqual('test_question', data.get('question'))
         self.assertEqual('test_prediction', data.get('prediction'))
@@ -307,29 +295,34 @@ class ExtractSingleRequestLogTest(_Base):
         self.assertEqual('test_fig', data.get('figure'))
 
 
+@patch('main.web.api._api._is_authorized', new=MagicMock())
+@patch('main.web.api._api.RequestLog')
 class ExtractPredictionScoreLogsTest(_Base):
 
-    @patch('main.web.api._api.RequestLog.query')
-    def test_extract_all_scores(self, mock_query):
+    def test_extract_all_scores(self, Log):
         size = 4
 
-        Score = namedtuple(
-            'PredictionScore',
-            'rate,prediction,probability,answer,predicted_time,log'
-        )
-        Request = namedtuple('RequestLog', 'id,score')
+        req_log = namedtuple('ReqLog', 'id, score')
+        score = namedtuple('Score', 'rate, prediction, probability, answer, predicted_time')
 
-        mock_all = Mock(RequestLog)
-        mock_all.return_value = \
-            [Request(id=i+1,
-                     score=Score(**{'rate': 1,
-                                    'prediction': 'test',
-                                    'probability': 0.4,
-                                    'answer': 'test',
-                                    'predicted_time': '',
-                                    'log': None}))
-                for i in range(size)]
-        mock_query.return_value.all = mock_all
+        logs = []
+        for i in range(1, size << 1):
+            if i & 1:
+                score_ = score(rate=3,
+                               prediction='test',
+                               probability=None,
+                               answer='tested',
+                               predicted_time=None)
+            else:
+                # dummy data, should not be captured
+                score_ = None
+
+            req = req_log(id=i, score=score_)
+            logs.append(req)
+
+        assert len(logs) == (size << 1) - 1
+
+        Log.query.return_value.all.return_value = logs
 
         # send request and extract data
         response = self.client.get('/api/logs/predictions')
@@ -338,86 +331,67 @@ class ExtractPredictionScoreLogsTest(_Base):
 
         self.assertEqual(len(data), size)
 
-        for id_, log in enumerate(data, 1):
-            self.assertEqual(log.get('request_id'), id_)
-            self.assertEqual(log.get('prediction'), 'test')
-
-    def test_extract_scores_by_question_type(self):
+    def test_extract_scores_by_question_type(self, Log):
         size = 5
-        target_size = 3
 
-        target_type = 'question_type'
-        target_qtype = QuestionType(type=target_type)
-        target_qtype.save()
-        dummy_qtype = QuestionType(type='dummy')
-        dummy_qtype.save()
+        score = MagicMock(rate=3,
+                          prediction='pred',
+                          probability=None,
+                          answer='ans',
+                          predicted_time=None)
 
-        img = Image(filename='img.jpg')
-        img.save()
-        question = Question(question='test question')
-        question.save()
-
-        for i in range(target_size):
-            score = PredictionScore(prediction='pred')
-            score.save()
-            RequestLog(question_type=target_qtype,
-                       question_id=question.id,
-                       image_id=img.id,
-                       score_id=score.id,
-                       log_type='test',
-                       log_text=f'this is test {i}').save()
-
-        # append type which should be filtered out
-        for i in range(size - target_size):
-            RequestLog(question_type=dummy_qtype,
-                       question_id=question.id,
-                       image_id=img.id,
-                       score_id=score.id,
-                       log_type='test',
-                       log_text=f'this is dummy {i}').save()
+        m1 = Log.query.return_value
+        m2 = m1.filter.return_value
+        m2.all.return_value = \
+            [MagicMock(id=i, score=score) for i in range(1, size + 1)]
 
         # send request and extract data
-        response = self.client.post(
+        res = self.client.post(
             '/api/logs/predictions',
-            data=dict(question_type=target_type)
+            data=dict(question_type='test_q')
         )
 
-        self.assertEqual(response.status_code, 200)
-        self.assertTrue(response.json.get('done'))
-        data = response.json.get('data')
+        self.assertEqual(res.status_code, 200)
+        data = res.json.get('data')
 
-        self.assertEqual(len(data), target_size)
+        self.assertEqual(len(data), size)
 
         for log in data:
             self.assertEqual(log.get('prediction'), 'pred')
 
+        m1.filter.assert_called_once_with(Log.question_type.has.return_value)
 
+
+@patch('main.web.api._api._is_authorized', new=MagicMock())
 class UpdateItemTest(_Base):
 
-    def test_extract_update_list(self):
+    @patch('main.web.api._api.Update')
+    def test_extract_update_list(self, Update):
         size = 4
-        for i in range(size):
-            Update(content=f'test {i}').save()
+        m = MagicMock()
+        m.to_dict.return_value = 'test'
+        Update.query.return_value.all.return_value = [m] * size
 
         res = self.client.get('/api/updates/all')
+
         self.assertEqual(res.status_code, 200)
-        self.assertTrue(res.json.get('done'))
         data = res.json.get('data')
         self.assertEqual(len(data), size)
 
-    def test_register_new_update(self):
-        size = 4
-        init_size = Update.query().count()
-        for i in range(4):
-            with self.subTest(i=i):
-                res = self.client.post(
-                    '/api/update/register',
-                    data=dict(content=f'test {i}')
-                )
-                self.assertEqual(res.status_code, 200)
-                self.assertTrue(res.json.get('done'))
+    @patch('main.web.api._api.Update')
+    def test_register_new_update(self, Update):
+        test_content = 'test_content'
 
-        self.assertEqual(Update.query().count(), size+init_size)
+        res = self.client.post(
+            '/api/update/register',
+            data=dict(content=test_content)
+        )
+
+        self.assertEqual(res.status_code, 200)
+
+        Update.assert_called_once_with(content=test_content)
+
+        Update.return_value.save.assert_called()
 
     def test_fail_to_register_update(self):
         res = self.client.post(
@@ -428,44 +402,51 @@ class UpdateItemTest(_Base):
         self.assertIn('error', res.json)
 
 
-class CitationItemTest(_Base):
+@patch('main.web.api._api._is_authorized', new=MagicMock())
+@patch('main.web.api._api.Citation')
+class ReferenceItemTest(_Base):
 
-    def test_extract_references(self):
-        size = 4
-        init_size = Citation.query().count()
-        for i in range(size):
-            Citation(author='tester',
-                     title=f'test {i}',
-                     year=1990+i).save()
+    def test_register_reference_item(self, Citation):
+        author = 'tester'
+        title = 'test title'
+        year = '1990'
 
-        res = self.client.get('/api/references/all')
-        self.assertEqual(res.status_code, 200)
-        self.assertTrue(res.json.get('done'))
-        data = res.json.get('data')
-        self.assertEqual(len(data), size+init_size)
+        res = self.client.post(
+            '/api/reference/register',
+            data=dict(author=author,
+                      title=title,
+                      year=year)
+        )
+        self.assertEqual(res.status_code, 201)
 
-    def test_register_new_citation(self):
-        size = 4
-        init_size = Citation.query().count()
-        for i in range(4):
-            with self.subTest(i=i):
-                res = self.client.post(
-                    '/api/reference/register',
-                    data=dict(author='tester',
-                              title=f'test {i}')
-                )
-                self.assertEqual(res.status_code, 200)
-                self.assertTrue(res.json.get('done'))
+        Citation.assert_called_once_with(author=author,
+                                         title=title,
+                                         year=year,
+                                         url=None)
 
-        self.assertEqual(Citation.query().count(), size+init_size)
+        Citation.return_value.save.side_effect = ValueError()
 
-    def test_fail_to_register_citation(self):
+        # check if fail to register
         res = self.client.post(
             '/api/reference/register',
             data=dict(author='tester'),
         )
         self.assertEqual(res.status_code, 400)
         self.assertIn('error', res.json)
+
+    def test_reference_list_all(self, Citation):
+        size = 4
+        m = MagicMock()
+        m.to_dict.return_value = {'title': 'test'}
+
+        Citation.query.return_value.all.return_value = [m] * size
+
+        res = self.client.get('/api/references/all')
+
+        self.assertEqual(res.status_code, 200)
+
+        data = res.json.get('data')
+        self.assertEqual(len(data), size)
 
 
 if __name__ == '__main__':

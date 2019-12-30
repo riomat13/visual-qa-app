@@ -165,8 +165,10 @@ class VQA(object):
                 data_type='annotations', num_data=num_data)
 
         for q, a in zip(questions, answers):
-            # check if the question_id is the same
+            # make sure if the question_id is the same
             if q[0] == a[0]:
+                # store as list of
+                # ('question', 'question_type', 'answers(list)', 'image_path')
                 dataset.append((q[1][0], a[1][0], a[1][1], q[1][1]))
             else:
                 warnings.warn(

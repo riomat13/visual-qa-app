@@ -28,9 +28,9 @@ def model_list():
     _is_authorized()
 
     kwargs = {
+        'status': 'success',
         'task': 'read-only',
-        'type': 'model',
-        'done': True
+        'type': 'model'
     }
 
     models = MLModel.query().all()
@@ -45,9 +45,9 @@ def register_model():
     _is_authorized()
 
     kwargs = {
+        'status': 'success',
         'task': 'register',
-        'type': 'model',
-        'done': True
+        'type': 'model'
     }
 
     try:
@@ -60,10 +60,10 @@ def register_model():
                         metrics=request.values.get('metrics'),
                         score=request.values.get('score'))
         model.save()
-        response = jsonify(data=model.to_dict(), **kwargs)
-        response.status_code = 200
+        response = jsonify(kwargs)
+        response.status_code = 201
     except Exception as e:
-        kwargs['done'] = False
+        kwargs['status'] = 'error'
         response = jsonify(
             message='failed to upload',
             error=str(e),
@@ -78,9 +78,9 @@ def get_model_info(model_id):
     _is_authorized()
 
     kwargs = {
+        'status': 'success',
         'task': 'read-only',
-        'type': 'model',
-        'done': True
+        'type': 'model'
     }
 
     model = MLModel.get(model_id)
@@ -99,9 +99,9 @@ def predict_question_type():
     question = request.values.get('question')
 
     kwargs = {
+        'status': 'success',
         'task': 'prediction',
-        'type': 'question type',
-        'done': True
+        'type': 'question type'
     }
 
     # empty path is trigger to execute only question type prediction
@@ -134,9 +134,9 @@ def extract_requests_logs():
             logs = logs.filter(RequestLog.image_id==img_id)
 
     kwargs = {
+        'status': 'success',
         'task': 'read-only',
-        'type': 'request log',
-        'done': True
+        'type': 'request log'
     }
 
     response = jsonify(data=[log.to_dict() for log in logs.all()],
@@ -151,9 +151,9 @@ def extract_requst_log(req_id):
 
     log = RequestLog.get(req_id)
     kwargs = {
+        'status': 'success',
         'task': 'read-only',
-        'type': 'request log',
-        'done': True
+        'type': 'request log'
     }
 
     response = jsonify(data=log.to_dict(),
@@ -168,9 +168,9 @@ def extract_qa_by_request_log(req_id):
 
     log = RequestLog.get(req_id)
     kwargs = {
+        'status': 'success',
         'task': 'read-only',
-        'type': 'request log',
-        'done': True
+        'type': 'request log'
     }
 
     data = {
@@ -197,9 +197,9 @@ def extract_prediction_logs():
         logs = logs.filter(RequestLog.question_type.has(type=q_type))
 
     kwargs = {
+        'status': 'success',
         'task': 'read-only',
-        'type': 'prediction log',
-        'done': True
+        'type': 'prediction log'
     }
 
     response = jsonify(data=[
@@ -221,9 +221,9 @@ def update_list():
     _is_authorized()
 
     kwargs = {
+        'status': 'success',
         'task': 'read-only',
-        'type': 'update',
-        'done': True
+        'type': 'update'
     }
 
     response = jsonify(data=[u.to_dict() for u in Update.query().all()],
@@ -240,17 +240,17 @@ def add_update():
     u = Update(content=content)
 
     kwargs = {
+        'status': 'success',
         'task': 'register',
-        'type': 'update',
-        'done': True
+        'type': 'update'
     }
 
     try:
         u.save()
-        response = jsonify(data=u.to_dict(), **kwargs)
+        response = jsonify(kwargs)
         response.status_code = 200
     except Exception as e:
-        kwargs['done'] = False
+        kwargs['status'] = 'error'
         response = jsonify(message='failed to upload',
                            error=str(e),
                            **kwargs)
@@ -264,9 +264,9 @@ def reference_list():
     _is_authorized()
 
     kwargs = {
+        'status': 'success',
         'task': 'read-only',
         'type': 'reference',
-        'done': True
     }
 
     response = jsonify(data=[c.to_dict() for c in Citation.query().all()],
@@ -285,17 +285,17 @@ def add_reference():
                  url=request.values.get('url'))
 
     kwargs = {
+        'status': 'success',
         'task': 'register',
         'type': 'reference',
-        'done': True
     }
 
     try:
         c.save()
-        response = jsonify(data=c.to_dict(), **kwargs)
-        response.status_code = 200
+        response = jsonify(kwargs)
+        response.status_code = 201
     except Exception as e:
-        kwargs['done'] = False
+        kwargs['status'] = 'error'
         response = jsonify(message='failed to upload',
                            error=str(e),
                            **kwargs)
