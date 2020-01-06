@@ -120,6 +120,41 @@ class _DotAttention(tf.keras.Model):
         return context, attention_weights
 
 
+class _BilinearAttention(tf.keras.Model):
+    def __init__(self, units, seq_length):
+        super(_BilinearAttention, self).__init__()
+        self.repeat = tf.keras.layers.RepeatVector(seq_length)
+        self.dense = tf.keras.layers.Dense(units)
+
+    def call(self, features, states):
+        """
+        Args:
+            features: encoded features from RNN
+                shape = (batch_size, sequence_length, embedding_dim)
+            states:   hidden states
+                shape = (batch_size, hidden_size)
+        Returns:
+            context: context tensor
+                shape = (batch_size, hidden_size)
+            attention_weights: weights used for attention
+                shape = (batch_size, sequence_length, 1)
+        """
+        # weights to update feature importance
+        states = self.repeat(states)
+
+        # calculate attention weights
+        # (batch_size, sequence_length, units)
+        score = self.dense(features) * states
+        attention_weights = tf.nn.softmax(score, axis=1)
+
+        # update the feature weighted by importance
+        # context shape = (batch_size, units)
+        context = attention_weights * features
+        context = tf.reduce_sum(context, axis=1)
+
+        return context, attention_weights
+
+
 class Attention(tf.keras.Model):
     def __init__(self, units, seq_length, mode='dot'):
         super(Attention, self).__init__()
@@ -129,8 +164,10 @@ class Attention(tf.keras.Model):
             self.model = _DotAttention(seq_length)
         elif mode == 'additive':
             self.model = _AdditiveAttention(units)
+        elif mode == 'bilinear':
+            self.model = _BilinearAttention(units, seq_length)
         else:
-            raise ValueError('Choose mode from [`dot`, `additive`]')
+            raise ValueError('Choose mode from [`dot`, `additive`, `bilinear`]')
 
     def call(self, features, states):
         return self.model(features, states)

@@ -10,7 +10,6 @@ from main.settings import Config
 from .common import (
     Attention,
     SimpleQuestionImageEncoder,
-    QuestionImageEncoder
 )
 
 log = logging.getLogger(__name__)
@@ -107,14 +106,9 @@ class SequenceGeneratorModel(tf.keras.Model):
                  units,
                  vocab_size,
                  seq_length,
-                 embedding_layer=None):
+                 embedding_dim):
 
         super(SequenceGeneratorModel, self).__init__()
-
-        if embedding_layer is None:
-            embedding_layer = tf.keras.layers.Embedding(vocab_size+1,
-                                                        units)
-        self.embedding = embedding_layer
 
         self.attention_q1 = Attention(units, seq_length)
         self.attention_q2 = Attention(units, seq_length)
@@ -132,7 +126,7 @@ class SequenceGeneratorModel(tf.keras.Model):
 
         Args:
             x: tensor represents input words
-                shape = (None, )
+                shape = (None, embedding_dim)
             qs: tensor
                 embedded sequence
                 shape = (None, sequence_length, units)
@@ -155,10 +149,6 @@ class SequenceGeneratorModel(tf.keras.Model):
                 weights of input sequence
                 shape = (None, seqence_length)
         """
-        # make input as sequence with length 1
-        # shape => (None, 1, embedding_dim)
-        x = self.embedding(x)
-
         # apply attention based on input words to get context vector
         # context shape => (None, units)
         context_q, _ = self.attention_q1(qs, hidden)
@@ -173,7 +163,77 @@ class SequenceGeneratorModel(tf.keras.Model):
         x = self.fc1(x)
         x = self.fc2(x)
         x = self.output_layer(x)
-        return x, state, weights_q
+        return x, state
+
+
+class SequenceGeneratorModel_v2(tf.keras.Model):
+    """Generate word based on input context."""
+    def __init__(self,
+                 units,
+                 vocab_size,
+                 seq_length,
+                 embedding_dim):
+
+        super(SequenceGeneratorModel_v2, self).__init__()
+
+        self.attention_q1 = Attention(units, seq_length, mode='dot')
+        self.attention_q2 = Attention(units, seq_length, mode='dot')
+        self.attention_features = Attention(units, 49, mode='dot')
+        self.gru = tf.keras.layers.GRU(units,
+                                       return_state=True,
+                                       recurrent_initializer='glorot_uniform')
+
+        self.fc1 = tf.keras.layers.Dense(1024)
+        self.bn1 = tf.keras.layers.BatchNormalization()
+        self.fc2 = tf.keras.layers.Dense(1024)
+        self.bn2 = tf.keras.layers.BatchNormalization()
+        self.output_layer = tf.keras.layers.Dense(vocab_size)
+
+    def call(self, x, qs, features, hidden):
+        """Generate word based on input word.
+
+        Args:
+            x: tensor represents input words
+                shape = (None, embedding_dim)
+            qs: tensor
+                embedded sequence
+                shape = (None, sequence_length, embedding_dim)
+            features: tensor
+                encoded features
+                shape = (None, sequence_length, units)
+            hidden: tensor
+                previous state
+                shape = (None, units)
+        Return:
+            (next_word, hidden_state, attention_weights)
+
+            next_word: tensor
+                generated word
+                shape = (None, vocab_size)
+            hidden_state: tensor
+                last state to use for next step
+                shape = (None, units)
+        """
+        # apply attention based on input words to get context vector
+        # context shape => (None, units)
+        context_q, _ = self.attention_q1(qs, hidden)
+
+        # parse question and features to get context from both
+        context_features, _ = self.attention_features(features, hidden)
+
+        x = tf.concat([x, context_q, context_features], axis=-1)
+        x = tf.expand_dims(x, axis=1)
+        log.info(f'Inside generator(before gru) - {x.shape}')
+        x, state = self.gru(x)
+
+        x = self.fc1(x)
+        x = self.bn1(x)
+
+        x = self.fc2(x)
+        x = self.bn2(x)
+
+        x = self.output_layer(x)
+        return x, state
 
 
 class QuestionAnswerModel(tf.keras.Model):
@@ -182,6 +242,7 @@ class QuestionAnswerModel(tf.keras.Model):
                  seq_length,
                  ans_length,
                  vocab_size,
+                 embedding_dim,
                  model_type,
                  set_weights=True):
         """Question Answering with generating sequence.
@@ -199,6 +260,7 @@ class QuestionAnswerModel(tf.keras.Model):
                 if predict '<EOS>' before reaching this length,
                 may predict all empty later than it
             vocab_size: int
+            embedding_dim: int
             model_type: str
                 path to weight data is stored
                 can be selected from
@@ -213,23 +275,24 @@ class QuestionAnswerModel(tf.keras.Model):
 
         super(QuestionAnswerModel, self).__init__()
 
-        model_cfg = Config.MODELS[model_type].get('path')
+        model_cfg = Config.MODELS[model_type]
+        model_path = model_cfg.get('path')
 
         # models
         # encoding questions and images
-        encoder = SimpleQuestionImageEncoder(units, vocab_size, units)
+        encoder = SimpleQuestionImageEncoder(units, vocab_size, embedding_dim)
 
         # generating words
-        generator_model = SequenceGeneratorModel(units,
-                                                 vocab_size,
-                                                 seq_length,
-                                                 encoder.embedding)
+        generator_model = SequenceGeneratorModel(model_cfg.get('units'),
+                                                 model_cfg.get('vocab_size'),
+                                                 model_cfg.get('seq_length'),
+                                                 model_cfg.get('embedding_dim'))
 
         if set_weights:
-            encoder.load_weights(os.path.join(model_cfg, 'encoder', 'weights'))
-            generator_model.load_weights(
-                os.path.join(model_cfg, 'gen', 'weights')
-            )
+            tf.train.Checkpoint(model=encoder) \
+                    .restore(tf.train.latest_checkpoint(os.path.join(model_path, 'encoder')))
+            tf.train.Checkpoint(model=generator_model) \
+                    .restore(tf.train.latest_checkpoint(os.path.join(model_path, 'gen')))
 
         self.encoder = encoder
         self.generator = generator_model
@@ -256,19 +319,16 @@ class QuestionAnswerModel(tf.keras.Model):
         q_features, img_features = self.encoder(qs, imgs)
 
         preds = []
+
+        # TODO: output weights calculated by attention
         attention_weights = []
 
         for i in range(1, self.ans_length):
-            x, hidden, weight = self.generator(x, q_features, img_features, hidden)
+            x = self.encoder.embedding(x)
+            x, hidden = self.generator(x, q_features, img_features, hidden)
             x = tf.argmax(x, axis=-1)
             preds.append(x)
-            attention_weights.append(weight)
 
         preds = tf.stack(preds, axis=1)
-        attention_weights = tf.stack(attention_weights, axis=1)
-        attention_weights = tf.reshape(
-            attention_weights,
-            (-1, self.ans_length-1, qs.shape[1])
-        )
 
         return preds, attention_weights

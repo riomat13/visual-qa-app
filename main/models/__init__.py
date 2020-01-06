@@ -4,7 +4,7 @@
 from ._models import (
     QuestionTypeClassification,
     ClassificationModel,
-    SequenceGeneratorModel,
+    SequenceGeneratorModel_v2 as SequenceGeneratorModel,
     QuestionAnswerModel,
 )
 from .common import (
