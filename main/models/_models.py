@@ -223,7 +223,6 @@ class SequenceGeneratorModel_v2(tf.keras.Model):
 
         x = tf.concat([x, context_q, context_features], axis=-1)
         x = tf.expand_dims(x, axis=1)
-        log.info(f'Inside generator(before gru) - {x.shape}')
         x, state = self.gru(x)
 
         x = self.fc1(x)
@@ -290,9 +289,9 @@ class QuestionAnswerModel(tf.keras.Model):
 
         if set_weights:
             tf.train.Checkpoint(model=encoder) \
-                    .restore(tf.train.latest_checkpoint(os.path.join(model_path, 'encoder')))
+                    .restore(tf.train.latest_checkpoint(os.path.join(model_path, 'encoder', 'weights')))
             tf.train.Checkpoint(model=generator_model) \
-                    .restore(tf.train.latest_checkpoint(os.path.join(model_path, 'gen')))
+                    .restore(tf.train.latest_checkpoint(os.path.join(model_path, 'gen', 'weights')))
 
         self.encoder = encoder
         self.generator = generator_model

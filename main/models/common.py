@@ -196,7 +196,9 @@ class SimpleQuestionImageEncoder(tf.keras.Model):
                 shape: (batch_size, units)
         """
         q_embedded = self.embedding(qs)
+        imgs = tf.reshape(imgs, [-1, 1024])
         img_features = self.dense(imgs)
+        img_features = tf.reshape(img_features, [-1, 49, img_features.shape[-1]])
         return q_embedded, img_features
 
 
@@ -230,5 +232,7 @@ class QuestionImageEncoder(tf.keras.Model):
         """
         qs_features = self.embedding(qs)
         qs_features = self.bi_gru(qs_features)
-        imgs_encoded = self.dense(imgs)
-        return qs_features, imgs_encoded
+        imgs = tf.reshape(imgs, [-1, 1024])
+        img_features = self.dense(imgs)
+        img_features = tf.reshape(img_features, [-1, 49, img_features.shape[-1]])
+        return qs_features, img_features
