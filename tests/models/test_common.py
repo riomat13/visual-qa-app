@@ -50,7 +50,7 @@ class AttentionModelTest(unittest.TestCase):
         states = np.random.randn(batch_size, hidden_units)
 
         # different unit size from input
-        model = Attention(32, seq_length)
+        model = Attention(32, seq_length, mode='dot')
         out, weights = model(features, states)
         self.assertEqual(out.shape, (batch_size, hidden_units))
         self.assertEqual(weights.shape, (batch_size, seq_length, 1))

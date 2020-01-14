@@ -176,9 +176,8 @@ class SequenceGeneratorModel_v2(tf.keras.Model):
 
         super(SequenceGeneratorModel_v2, self).__init__()
 
-        self.attention_q1 = Attention(units, seq_length, mode='dot')
-        self.attention_q2 = Attention(units, seq_length, mode='dot')
-        self.attention_features = Attention(units, 49, mode='dot')
+        self.attention_q1 = Attention(units, seq_length)
+        self.attention_features = Attention(units, 49)
         self.gru = tf.keras.layers.GRU(units,
                                        return_state=True,
                                        recurrent_initializer='glorot_uniform')
@@ -274,24 +273,29 @@ class QuestionAnswerModel(tf.keras.Model):
 
         super(QuestionAnswerModel, self).__init__()
 
-        model_cfg = Config.MODELS[model_type]
-        model_path = model_cfg.get('path')
+        model_path = Config.MODELS[model_type].get('path')
 
         # models
         # encoding questions and images
         encoder = SimpleQuestionImageEncoder(units, vocab_size, embedding_dim)
 
         # generating words
-        generator_model = SequenceGeneratorModel(model_cfg.get('units'),
-                                                 model_cfg.get('vocab_size'),
-                                                 model_cfg.get('seq_length'),
-                                                 model_cfg.get('embedding_dim'))
+        generator_model = SequenceGeneratorModel_v2(units,
+                                                    vocab_size,
+                                                    seq_length,
+                                                    embedding_dim)
 
         if set_weights:
-            tf.train.Checkpoint(model=encoder) \
-                    .restore(tf.train.latest_checkpoint(os.path.join(model_path, 'encoder', 'weights')))
-            tf.train.Checkpoint(model=generator_model) \
-                    .restore(tf.train.latest_checkpoint(os.path.join(model_path, 'gen', 'weights')))
+            if not os.path.join(model_path, 'encoder') \
+                    or not os.path.join(model_path, 'weights'):
+                raise ValueError('Model checkpoint directories do not exist')
+
+            status = tf.train.Checkpoint(model=encoder) \
+                    .restore(tf.train.latest_checkpoint(os.path.join(model_path, 'encoder')))
+            status.assert_existing_objects_matched()
+            status = tf.train.Checkpoint(model=generator_model) \
+                    .restore(tf.train.latest_checkpoint(os.path.join(model_path, 'gen')))
+            status.assert_existing_objects_matched()
 
         self.encoder = encoder
         self.generator = generator_model

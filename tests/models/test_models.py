@@ -10,7 +10,7 @@ import logging
 logging.disable(logging.CRITICAL)
 
 import unittest
-from unittest.mock import patch, Mock
+from unittest.mock import patch
 
 import numpy as np
 
@@ -76,6 +76,10 @@ class QuestionAnswerModelTest(unittest.TestCase):
         batch_size = 4
         in_seq_len = 10
         out_seq_len = 5
+
+        Checkpoint.return_value \
+            .restore.return_value \
+            .assert_existing_objects_matched = lambda: True
 
         model = QuestionAnswerModel(512,
                                     in_seq_len,
