@@ -21,7 +21,7 @@ from sqlalchemy.orm import relationship
 from main.orm.db import Base
 from main.orm.types import ChoiceType
 from main.mixins.models import BaseMixin, ModelLogMixin
-from main.orm.models.data import Question, Image
+from main.models.data import Question, Image
 
 log = logging.getLogger(__name__)
 

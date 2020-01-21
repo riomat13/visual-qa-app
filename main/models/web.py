@@ -3,7 +3,6 @@
 
 from datetime import datetime
 
-
 from sqlalchemy import Column, String, Integer, DateTime
 
 from main.orm.db import Base
@@ -20,6 +19,17 @@ class Update(BaseMixin, Base):
     content = Column(String(256), nullable=False)
     update_at = Column(DateTime, default=datetime.utcnow())
     summary = Column(String(512), nullable=True)
+
+    def to_dict(self, date=False):
+        update = self.update_at
+        if date:
+            update = update.strftime('%m/%d/%Y')
+
+        return {
+            'content': self.content,
+            'update_at': update,
+            'summary': self.summary,
+        }
 
 
 class Citation(BaseMixin, Base):

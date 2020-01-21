@@ -4,7 +4,7 @@
 import unittest
 
 from .base import _Base
-from main.orm.models.web import Update, Citation
+from main.models.web import Update, Citation
 
 
 class UpdateModelTest(_Base):
@@ -18,6 +18,26 @@ class UpdateModelTest(_Base):
 
         self.assertEqual(data.id, update.id)
         self.assertEqual(data.content, content)
+
+    def test_update_item_to_dict(self):
+        content = 'this is the first content.'
+        update = Update(content=content)
+        update.save()
+
+        data = update.to_dict(date=True)
+        self.assertIn('content', data)
+        self.assertEqual(content, data.get('content'))
+
+        self.assertIn('update_at', data)
+        self.assertTrue(isinstance(data.get('update_at'), str))
+        dates = data.get('update_at').split('/')
+        self.assertEqual(3, len(dates))
+
+        for d in dates:
+            self.assertTrue(d.isdigit())
+
+        self.assertIn('summary', data)
+
 
 class CitationModelTest(_Base):
 

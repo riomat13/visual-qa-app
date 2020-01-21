@@ -7,7 +7,6 @@ import logging
 
 import numpy as np
 
-from main.orm.models.data import Image
 from main.utils.images import update_row_image
 
 logging.disable(logging.CRITICAL)

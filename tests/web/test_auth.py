@@ -20,7 +20,7 @@ set_config('test')
 from main.settings import Config
 from main.web.app import create_app
 from main.orm.db import Base
-from main.orm.models.base import User as DBUser
+from main.models.base import User as DBUser
 from main.web.auth import generate_token, get_user_by_token, verify_user
 
 

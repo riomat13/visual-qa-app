@@ -11,13 +11,13 @@ from main.settings import set_config
 set_config('test')
 
 from .base import _Base
-from main.orm.models.ml import (
+from main.models.ml import (
     MLModel, ModelLog, RequestLog, PredictionScore,
     QuestionType
 )
-from main.orm.models.data import Image, Question
+from main.models.data import Image, Question
 
-#logging.disable(logging.CRITICAL)
+logging.disable(logging.CRITICAL)
 
 SAMPLE_TEXT = 'sample text'
 
@@ -104,13 +104,6 @@ class MLModelTest(_Base):
         data = MLModel.query().first()
         self.assertEqual(data.score, new_score)
 
-    def test_type_must_be_chosen_from_registered_items(self):
-        model = MLModel(name='test_model',
-                        type='cls',
-                        category='question_type',
-                        module='main.ml',
-                        object='Class')
-
 
 class ModelLogTest(_Base):
 
@@ -142,21 +135,6 @@ class RequestLogTest(_Base):
         img.save()
         self.img_id = img.id
 
-
-    def test_model_request_log_saved(self):
-        log = RequestLog(
-            question_type=self.qtype,
-            question_id=self.question_id,
-            image_id=self.img_id,
-            log_type='success',
-            log_text=SAMPLE_TEXT)
-
-        log.save()
-
-        data = RequestLog.query().first()
-
-        self.assertEqual(data.log_text, SAMPLE_TEXT)
-
     def test_serialize_data_as_dict(self):
         log = RequestLog(
             question_type_id=self.qtype.id,
@@ -166,6 +144,10 @@ class RequestLogTest(_Base):
             log_text=SAMPLE_TEXT)
 
         log.save()
+
+        # check if properly saved
+        log = RequestLog.query().first()
+        self.assertEqual(log.log_text, SAMPLE_TEXT)
 
         data = log.to_dict()
 
@@ -184,18 +166,52 @@ class PredictionScoreTest(_Base):
     def setUp(self):
         super(PredictionScoreTest, self).setUp()
 
+        self.qtype = QuestionType(type='testcase')
+        self.qtype.save()
+
+        q = Question(question='is this test')
+        q.save()
+        self.question_id = q.id
+
+        img = Image(filename='test.jpg')
+        img.save()
+        self.img_id = img.id
+
         self.test_predict = 'some result'
+        log = RequestLog(
+            question_type=self.qtype,
+            question_id=self.question_id,
+            image_id=self.img_id,
+            log_type='success',
+            log_text=SAMPLE_TEXT)
+        log.save()
 
         pred = PredictionScore(prediction=self.test_predict,
+                               log=log,
                                rate=1)
         pred.save()
         self.id = pred.id
+        self.req_log = log
 
     def test_model_saved_properly(self):
         data = PredictionScore.get(self.id)
 
         # check saved properly
         self.assertEqual(data.prediction, self.test_predict)
+
+        # check make relationship with log
+        self.assertEqual(data.log.log_text, SAMPLE_TEXT)
+
+        # fail if rate is too high or low
+        with self.assertRaises(ValueError):
+            PredictionScore(prediction='invalid',
+                            log=self.req_log,
+                            rate=10)
+
+        with self.assertRaises(ValueError):
+            PredictionScore(prediction='invalid',
+                            log=self.req_log,
+                            rate=0)
 
     def test_update_score_information(self):
         data = PredictionScore.get(self.id)
@@ -208,15 +224,6 @@ class PredictionScoreTest(_Base):
 
         new_data = PredictionScore.get(self.id)
         self.assertEqual(new_data.answer, target)
-
-    def test_handle_out_of_range_rate(self):
-        with self.assertRaises(ValueError):
-            PredictionScore(prediction='invalid',
-                            rate=10)
-
-        with self.assertRaises(ValueError):
-            PredictionScore(prediction='invalid',
-                            rate=0)
 
 
 class QuestionTypeModelTest(_Base):

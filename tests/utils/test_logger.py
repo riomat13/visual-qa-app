@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 import warnings
 
-from main.orm.models.ml import RequestLog
+from main.models.ml import RequestLog
 from main.mixins.models import BaseMixin, ModelLogMixin
 from main.utils.logger import save_log
 

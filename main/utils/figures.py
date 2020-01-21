@@ -8,8 +8,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from main.utils.loader import load_image_simple
-from main.orm.models.ml import RequestLog
-from main.orm.models.data import WeightFigure
+from main.models.ml import RequestLog
+from main.models.data import WeightFigure
 
 log = logging.getLogger(__name__)
 

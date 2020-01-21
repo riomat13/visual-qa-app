@@ -4,8 +4,9 @@
 import logging
 
 from . import celery
-from main.orm.models.data import Image
+from main.models.data import Image
 from main.utils.images import update_row_image
+from main.tasks.sender import send_dataset
 
 log = logging.getLogger(__name__)
 
@@ -35,3 +36,8 @@ def image_process_task(ids=[]):
             update_row_image(img_model, remove=False)
             res.append(img_model.id)
     return res
+
+
+@celery.task()
+def send_image(paths):
+    send_dataset(paths, data_type='image')

@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from datetime import datetime
-
-from sqlalchemy import Column, String, Boolean, DateTime, Text
+from sqlalchemy import Column, String, Boolean
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from main.orm.db import Base
@@ -64,4 +62,3 @@ class AppLog(BaseLogMixin, BaseMixin, Base):
                 logs = logs.filter(AppLog.logged_time>=log_time)
 
         return logs.all()
-

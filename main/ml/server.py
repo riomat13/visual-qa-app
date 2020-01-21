@@ -8,8 +8,8 @@ import logging
 from main.utils.preprocess import text_processor
 from main.utils.logger import save_log
 #from main.utils.figures import generate_heatmap, save_figure
-from main.orm.models.ml import PredictionScore, RequestLog
-from main.orm.models.data import Image, Question
+from main.models.ml import PredictionScore, RequestLog
+from main.models.data import Image, Question
 from main.ml.infer import predict_question_type, PredictionModel
 
 log = logging.getLogger(__name__)

@@ -6,7 +6,7 @@ import unittest
 from main.settings import set_config
 set_config('test')
 
-from main.orm.models.data import Image, Question, WeightFigure
+from main.models.data import Image, Question, WeightFigure
 
 from .base import _Base
 
@@ -27,6 +27,9 @@ class ImageModelTest(_Base):
         fname = 'test.jpg'
         img = Image(filename=fname)
         img.save()
+
+        # before update, no data is stored
+        self.assertIsNotNone(img.original)
 
         img.update()
 

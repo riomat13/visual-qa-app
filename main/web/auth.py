@@ -12,7 +12,7 @@ from itsdangerous import (
 
 from . import base
 from main.settings import Config
-from main.orm.models.base import User
+from main.models.base import User
 
 
 def generate_token():

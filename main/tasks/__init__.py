@@ -5,7 +5,7 @@ from celery import Celery
 from celery.schedules import crontab
 
 from main.web.app import create_app
-from main.orm.models.data import Image
+from main.models.data import Image
 
 
 def make_celery(app):

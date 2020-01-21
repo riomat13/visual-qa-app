@@ -5,7 +5,7 @@ from datetime import datetime
 
 from .base import _Base
 
-from main.orm.models.base import User, AppLog
+from main.models.base import User, AppLog
 
 
 class UserModelTest(_Base):

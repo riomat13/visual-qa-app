@@ -17,10 +17,10 @@ from werkzeug.utils import secure_filename
 
 from main.web.auth import verify_user, generate_token, login_required
 from main.ml.client import run_model
-from main.orm.models.base import User
-from main.orm.models.ml import MLModel, RequestLog, PredictionScore, QuestionType
-from main.orm.models.web import Update, Citation
-from main.orm.models.data import Image, Question, WeightFigure
+from main.models.base import User
+from main.models.ml import MLModel, RequestLog, PredictionScore, QuestionType
+from main.models.web import Update, Citation
+from main.models.data import Image, Question, WeightFigure
 
 log = logging.getLogger(__name__)
 

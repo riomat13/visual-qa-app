@@ -17,9 +17,9 @@ set_config('test')
 from main.settings import Config
 from main.web.app import create_app
 from main.orm.db import Base
-from main.orm.models.base import User
-from main.orm.models.data import WeightFigure
-from main.orm.models.web import Update, Citation
+from main.models.base import User
+# from main.models.data import WeightFigure
+from main.models.web import Update, Citation
 
 logging.disable(logging.CRITICAL)
 
@@ -168,14 +168,12 @@ class PredictionTest(_Base):
             )
         self.assertEqual(response.status_code, 200)
 
-    @patch('main.web.views.WeightFigure')
     @patch('main.web.views.run_model')
     @patch('main.web.views.asyncio.run')
-    def test_return_with_prediction(self, mock_run, mock_run_model, mock_Figure):
+    def test_return_with_prediction(self, mock_run, mock_run_model):
         test_sent = 'this is test sentence'
         # mock prediction result
         mock_run.return_value = test_sent, 1000
-        mock_Figure.get.return_value.filename = 'testfile'
 
         response = self.client.post(
             '/prediction',
@@ -208,32 +206,29 @@ class PredictionTest(_Base):
         self.assertIn('some question', data)
         self.assertIn(test_sent, data)
 
-        # called by returned id
-        mock_Figure.get.assert_called_once_with(1000)
+    # TODO: add attention weight figure
+    # @patch('main.web.WeightFigure')
+    # @patch('main.web.views.run_model')
+    # @patch('main.web.views.asyncio.run')
+    # def test_figure_is_passed_to_template(self, mock_run, mock_run_model, WeightFigure):
+    #     test_sent = 'this is test sentence'
 
-    @patch('main.web.views.run_model')
-    @patch('main.web.views.asyncio.run')
-    def test_figure_is_passed_to_template(self, mock_run, mock_run_model):
-        test_sent = 'this is test sentence'
-        w = WeightFigure()
-        w.filename = 'testfile'
-        w.save()
+    #     # mock prediction result
+    #     mock_run.return_value = test_sent, w.id
 
-        # mock prediction result
-        mock_run.return_value = test_sent, w.id
+    #     self.test_upload_image()
+    #     response = self.client.post(
+    #         '/prediction',
+    #         data=dict(
+    #             action='Submit',
+    #             question='some question',
+    #         ),
+    #         follow_redirects=True,
+    #     )
 
-        self.test_upload_image()
-        response = self.client.post(
-            '/prediction',
-            data=dict(
-                action='Submit',
-                question='some question',
-            ),
-            follow_redirects=True,
-        )
-
-        data = response.data.decode()
-        self.assertRegex(data, r'<img src="[\w/_]+testfile">')
+    #     data = response.data.decode()
+    #     self.assertRegex(data, r'<img src="[\w/_]+testfile">')
+    #     WeightFigure.assert_called_once()
 
 
 class NoteViewTest(_Base):
