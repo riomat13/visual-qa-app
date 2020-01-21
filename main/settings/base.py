@@ -76,7 +76,7 @@ class Config(object):
             'seq_length': 10,
             'ans_length': 5,
             'vocab_size': 20000,
-            'embedding_dim': 256,
+            'embedding_dim': 512,
             'units': 512,
         },
         'WHICH': {
@@ -84,7 +84,7 @@ class Config(object):
             'seq_length': 10,
             'ans_length': 5,
             'vocab_size': 20000,
-            'embedding_dim': 256,
+            'embedding_dim': 512,
             'units': 512,
         },
         'WHO': {
@@ -92,7 +92,7 @@ class Config(object):
             'seq_length': 10,
             'ans_length': 5,
             'vocab_size': 20000,
-            'embedding_dim': 256,
+            'embedding_dim': 512,
             'units': 512,
         },
         'WHY': {
@@ -100,7 +100,7 @@ class Config(object):
             'seq_length': 10,
             'ans_length': 5,
             'vocab_size': 20000,
-            'embedding_dim': 256,
+            'embedding_dim': 512,
             'units': 512,
         },
         'COUNT': {
@@ -108,7 +108,7 @@ class Config(object):
             'seq_length': 10,
             'ans_length': 5,
             'vocab_size': 20000,
-            'embedding_dim': 256,
+            'embedding_dim': 512,
             'units': 512,
         },
         # non-categorized group
@@ -117,7 +117,7 @@ class Config(object):
             'seq_length': 10,
             'ans_length': 5,
             'vocab_size': 20000,
-            'embedding_dim': 256,
+            'embedding_dim': 512,
             'units': 512,
         },
         # text_tokenizer config file path
