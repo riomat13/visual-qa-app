@@ -3,6 +3,10 @@
 
 
 import unittest
+from unittest.mock import patch
+
+import random
+from functools import namedtuple
 import logging
 
 logging.disable(logging.CRITICAL)
@@ -16,8 +20,24 @@ set_config('test')
 from main.settings import Config
 from main.web.app import create_app
 from main.orm.db import Base
-from main.orm.models.base import User
-from main.web.auth import verify_user
+from main.orm.models.base import User as DBUser
+from main.web.auth import generate_token, get_user_by_token, verify_user
+
+
+USERNAME = 'testcase'
+EMAIL = 'test@test.com'
+PASSWORD = 'pwd'
+
+_User = namedtuple('User', 'id, username, email, password, is_admin, verify_password')
+
+
+def User(username=USERNAME, email=EMAIL, password=PASSWORD, is_admin=False, verify_password=None):
+    return _User(id=random.randint(1, 10),
+                 username=username,
+                 email=email,
+                 password=password,
+                 is_admin=is_admin,
+                 verify_password=verify_password)
 
 
 class _BaseWeb(unittest.TestCase):
@@ -32,9 +52,9 @@ class _BaseWeb(unittest.TestCase):
         self.engine = engine
         Base.metadata.create_all(engine)
 
-        u = User(username='test',
-                 email='test@example.com',
-                 password='pwd')
+        u = DBUser(username='test',
+                   email='test@example.com',
+                   password='pwd')
         u.save()
 
     def tearDown(self):
@@ -53,6 +73,28 @@ class _BaseWeb(unittest.TestCase):
     def logout(self):
         return self.client.get('/logout',
                                follow_redirects=True)
+
+
+class AuthTokenTest(unittest.TestCase):
+
+    def setUp(self):
+        self.user = User(username=USERNAME,
+                         email=EMAIL,
+                         password=PASSWORD)
+
+    def generate_token(self):
+        token = generate_token(self.user)
+        self.assertIsNotNone(token)
+        self.assertTrue(isinstance(token, bytes))
+        return token
+
+    @patch('main.web.auth.User')
+    def test_token_can_be_validated(self, mock_User):
+        mock_User.get.return_value = User()
+        token = self.generate_token()
+        user = get_user_by_token(token)
+        self.assertIsNotNone(user)
+        self.assertEqual(user.username, USERNAME)
 
 
 class UserVerificationTest(_BaseWeb):

@@ -4,9 +4,51 @@
 from functools import wraps, partial
 
 from flask import g, redirect, url_for, session, abort
+from itsdangerous import (
+    TimedJSONWebSignatureSerializer as Serializer,
+    SignatureExpired,
+    BadSignature
+)
 
 from . import base
+from main.settings import Config
 from main.orm.models.base import User
+
+
+def generate_token():
+    # save to reusable but unaccessible
+    s = Serializer(Config.SECRET_KEY, expires_in=300)
+
+    def generate_token(user=None):
+        """Generate token for each visit.
+        
+        Args:
+            user: User model
+            
+        Returns:
+            byte: token
+        """
+        nonlocal s
+        return s.dumps({'id': user.id})
+
+    def get_user_by_token(token) -> bool:
+        """Validate token for each visit."""
+        nonlocal s
+
+        try:
+            data = s.loads(token)
+        except SignatureExpired:
+            return None
+        except BadSignature:
+            return None
+
+        user = User.get(data['id'])
+        return user
+
+    return generate_token, get_user_by_token
+
+
+generate_token, get_user_by_token = generate_token()
 
 
 def verify_user(username, password, email=None):
