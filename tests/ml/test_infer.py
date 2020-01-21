@@ -11,22 +11,22 @@ logging.disable(logging.CRITICAL)
 import unittest
 from unittest.mock import patch, MagicMock
 
-from main.models._models import (
+from main.ml._models import (
     QuestionTypeClassification,
     ClassificationModel,
     QuestionAnswerModel,
 )
 
-mobilenet_encoder = patch('main.models.common.get_mobilenet_encoder')
+mobilenet_encoder = patch('main.ml.common.get_mobilenet_encoder')
 mobilenet_encoder.start()
 
-QTypeClsModel = patch('main.models._models.QuestionTypeClassification')
+QTypeClsModel = patch('main.ml._models.QuestionTypeClassification')
 QTypeClsModel.start()
 
-ClsModel = patch('main.models._models.ClassificationModel')
+ClsModel = patch('main.ml._models.ClassificationModel')
 ClsModel.start()
 
-QAModel = patch('main.models._models.QuestionAnswerModel')
+QAModel = patch('main.ml._models.QuestionAnswerModel')
 QAModel.start()
 
 import numpy as np
@@ -34,7 +34,7 @@ import numpy as np
 from main.settings import Config
 from main.utils.loader import fetch_question_types
 from main.utils.preprocess import text_processor
-from main.models.infer import (
+from main.ml.infer import (
     _get_q_type_model,
     _get_y_n_model,
     awake_models,
@@ -55,14 +55,14 @@ def mock_processor(arr=None):
     return processor
 
 
-@patch('main.models.infer.awake_models', new=MagicMock())
-@patch('main.models.infer._get_what_model', new=MagicMock())
-@patch('main.models.infer._get_y_n_model', new=MagicMock())
-@patch('main.models.infer._get_q_type_model', new=MagicMock())
+@patch('main.ml.infer.awake_models', new=MagicMock())
+@patch('main.ml.infer._get_what_model', new=MagicMock())
+@patch('main.ml.infer._get_y_n_model', new=MagicMock())
+@patch('main.ml.infer._get_q_type_model', new=MagicMock())
 class PredictionModelTest(unittest.TestCase):
 
-    @patch('main.models.infer._set_weights_by_config')
-    @patch('main.models.infer.text_processor')
+    @patch('main.ml.infer._set_weights_by_config')
+    @patch('main.ml.infer.text_processor')
     def test_get_model_instance(self, processor, mock_setter):
 
         # should be called by get_model() for singleton
@@ -75,8 +75,8 @@ class PredictionModelTest(unittest.TestCase):
 
         self.assertTrue(model is model2)
 
-    @patch('main.models.infer.predict_what', new=MagicMock())
-    @patch('main.models.infer.text_processor')
+    @patch('main.ml.infer.predict_what', new=MagicMock())
+    @patch('main.ml.infer.text_processor')
     def test_handle_not_understandable_question(self, processor):
         target = 'Can not understand the question'
         model = PredictionModel.get_model()
@@ -92,10 +92,10 @@ class PredictionModelTest(unittest.TestCase):
         res = model.predict('test', '')
         self.assertEqual(res, target)
 
-    @patch('main.models.infer.predict_yes_or_no')
-    @patch('main.models.infer.predict_question_type')
-    @patch('main.models.infer._set_weights_by_config', new=MagicMock())
-    @patch('main.models.infer.text_processor')
+    @patch('main.ml.infer.predict_yes_or_no')
+    @patch('main.ml.infer.predict_question_type')
+    @patch('main.ml.infer._set_weights_by_config', new=MagicMock())
+    @patch('main.ml.infer.text_processor')
     def test_run_prediction_from_yes_or_no(self, processor,
                                            mock_pred, target_pred):
         seq = np.array([[1, 2, 3]], dtype=np.int32)
@@ -114,13 +114,16 @@ class PredictionModelTest(unittest.TestCase):
         model.predict('test', 'path')
 
         mock_pred.assert_called_once_with(seq)
-        target_pred.assert_called_once_with(seq, 'path')
+        target_pred.assert_called()
+
+        # check if provided sequence is used to run prediction
+        np.testing.assert_array_equal(seq, target_pred.call_args[0][0])
 
 
 class PredictQuestionTypeTest(unittest.TestCase):
 
-    @patch('main.models.infer._set_weights_by_config')
-    @patch('main.models.infer.QuestionTypeClassification')
+    @patch('main.ml.infer._set_weights_by_config')
+    @patch('main.ml.infer.QuestionTypeClassification')
     def test_predicted_shape(self, Model, set_weights):
 
         batch_size = 4
@@ -147,7 +150,7 @@ class PredictQuestionTypeTest(unittest.TestCase):
 
         set_weights.assert_called_once_with('QTYPE', Model.return_value)
 
-    @patch('main.models.infer._get_q_type_model')
+    @patch('main.ml.infer._get_q_type_model')
     def test_predict_by_function(self, q_model):
         m = MagicMock()
         q_model.return_value = m
@@ -162,12 +165,12 @@ class PredictQuestionTypeTest(unittest.TestCase):
         self.assertEqual(pred, np.argmax(res, axis=1))
 
 
-@patch('main.models.infer.awake_models', new=MagicMock())
+@patch('main.ml.infer.awake_models', new=MagicMock())
 class PredictYesNoTest(unittest.TestCase):
 
-    @patch('main.models.infer._set_weights_by_config')
-    @patch('main.models.infer.load_image')
-    @patch('main.models.infer.ClassificationModel')
+    @patch('main.ml.infer._set_weights_by_config')
+    @patch('main.ml.infer.load_image')
+    @patch('main.ml.infer.ClassificationModel')
     def test_run_prediction_and_check_shape(self, Model, mock_loader, set_weights):
         mock_loader.return_value = \
             np.random.rand(224, 224, 3)
@@ -183,8 +186,8 @@ class PredictYesNoTest(unittest.TestCase):
 
 class SetUpModelsTest(unittest.TestCase):
 
-    @patch('main.models.infer._get_y_n_model')
-    @patch('main.models.infer._get_q_type_model')
+    @patch('main.ml.infer._get_y_n_model')
+    @patch('main.ml.infer._get_q_type_model')
     def test_awaking_models(self, mock_qtype, mock_y_n):
         mock_qtype.__name__ = 'mock_qtype'
         mock_y_n.__name__ = 'mock_y_n'
@@ -205,8 +208,8 @@ class ConvertResultTest(unittest.TestCase):
             with self.assertRaises(ValueError):
                 convert_output_to_sentence(case)
 
-    @patch('main.models.infer.processor.index_word')
-    @patch('main.models._models.ClassificationModel')
+    @patch('main.ml.infer.processor.index_word')
+    @patch('main.ml._models.ClassificationModel')
     def test_convert_output_to_seq(self, Model, mock_processor):
         mock_processor.__getitem__.side_effect = lambda x: 'test'
 

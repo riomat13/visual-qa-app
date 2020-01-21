@@ -14,8 +14,8 @@ from unittest.mock import patch
 
 import numpy as np
 
-from main.models._models import SequenceGeneratorModel, SequenceGeneratorModel_v2
-from main.models import QuestionAnswerModel
+from main.ml._models import SequenceGeneratorModel, SequenceGeneratorModel_v2
+from main.ml import QuestionAnswerModel
 
 
 class SequenceGeneratorModelTest(unittest.TestCase):
@@ -71,7 +71,7 @@ class SequenceGeneratorV2ModelTest(unittest.TestCase):
 
 class QuestionAnswerModelTest(unittest.TestCase):
 
-    @patch('main.models._models.tf.train.Checkpoint')
+    @patch('main.ml._models.tf.train.Checkpoint')
     def test_question_answer_model_shape(self, Checkpoint):
         batch_size = 4
         in_seq_len = 10

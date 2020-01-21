@@ -16,7 +16,7 @@ from main.settings import Config
 from werkzeug.utils import secure_filename
 
 from main.web.auth import verify_user, generate_token, login_required
-from main.models.client import run_model
+from main.ml.client import run_model
 from main.orm.models.base import User
 from main.orm.models.ml import MLModel, RequestLog, PredictionScore, QuestionType
 from main.orm.models.web import Update, Citation

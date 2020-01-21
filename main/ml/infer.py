@@ -86,6 +86,9 @@ class PredictionModel(BaseModel):
         pred_id = predict_question_type(sequence)
         w = None
 
+        # resize sequence length
+        sequence = sequence[:, :Config.MODELS.get(self._model_class[pred_id]).get('seq_length', 10)]
+
         if pred_id == 0:
             pred, w = predict_yes_or_no(sequence, img_path)
             if pred[0] == 0:
@@ -132,7 +135,7 @@ class PredictionModel(BaseModel):
             pred = convert_output_to_sentence(pred)
         # TODO: add couting model
         if not pred:
-            pred = 'Sorry, could not understand the question'
+            pred = 'Sorry, could not predict answer'
             pred_id = -1
         return pred, w, pred_id
 
@@ -228,9 +231,10 @@ def _get_what_model():
             cfg = Config.MODELS['WHAT']
             model = QuestionAnswerModel(
                 units=cfg.get('units'),
-                seq_length=15,
-                ans_length=7,
+                seq_length=cfg.get('seq_length'),
+                ans_length=cfg.get('ans_length'),
                 vocab_size=cfg.get('vocab_size'),
+                embedding_dim=cfg.get('embedding_dim'),
                 model_type='WHAT'
             )
 

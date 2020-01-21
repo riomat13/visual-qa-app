@@ -11,7 +11,7 @@ from unittest.mock import patch, Mock
 
 import numpy as np
 
-from main.models import (
+from main.ml import (
     get_mobilenet_encoder,
     Attention,
     QuestionTypeClassification,

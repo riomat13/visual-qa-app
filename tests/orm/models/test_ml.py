@@ -37,7 +37,7 @@ class MLModelTest(_Base):
         model = MLModel(name=model_name,
                         type='cls',
                         category='question_type',
-                        module='main.models',
+                        module='main.ml',
                         object='Class')
         model.save()
 
@@ -51,7 +51,7 @@ class MLModelTest(_Base):
         model = MLModel(name=model_name,
                         type='cls',
                         category='question_type',
-                        module='main.models',
+                        module='main.ml',
                         object='Class')
         model.save()
 
@@ -64,14 +64,14 @@ class MLModelTest(_Base):
         model = MLModel(name=model_name,
                         type='cls',
                         category=cat,
-                        module='main.models',
+                        module='main.ml',
                         object='Class')
         model.save()
 
         model2 = MLModel(name=model_name,
                          type='seq',
                          category='what',
-                         module='main.models',
+                         module='main.ml',
                          object='Class')
 
         with self.assertRaises(Exception):
@@ -85,7 +85,7 @@ class MLModelTest(_Base):
             MLModel(name='invalid_type',
                     type='incalid',
                     category=cat,
-                    module='main.models',
+                    module='main.ml',
                     object='Class')
 
 
@@ -94,7 +94,7 @@ class MLModelTest(_Base):
         model = MLModel(name='test_model',
                         type='cls',
                         category='question_type',
-                        module='main.models',
+                        module='main.ml',
                         object='Class',
                         metrics='validation_accuracy',
                         score=0.65)
@@ -108,7 +108,7 @@ class MLModelTest(_Base):
         model = MLModel(name='test_model',
                         type='cls',
                         category='question_type',
-                        module='main.models',
+                        module='main.ml',
                         object='Class')
 
 

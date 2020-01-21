@@ -12,7 +12,7 @@ from . import base
 from main.settings import Config
 from main.web.forms import UserForm, QuestionForm, UpdateForm, CitationForm
 from main.web.auth import verify_user, login_required
-from main.models.client import run_model
+from main.ml.client import run_model
 from main.orm.models.web import Update, Citation
 from main.orm.models.data import WeightFigure
 

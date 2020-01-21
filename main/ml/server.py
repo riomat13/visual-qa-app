@@ -7,10 +7,10 @@ import logging
 
 from main.utils.preprocess import text_processor
 from main.utils.logger import save_log
-from main.utils.figures import generate_heatmap, save_figure
+#from main.utils.figures import generate_heatmap, save_figure
 from main.orm.models.ml import PredictionScore, RequestLog
 from main.orm.models.data import Image, Question
-from main.models.infer import predict_question_type, PredictionModel
+from main.ml.infer import predict_question_type, PredictionModel
 
 log = logging.getLogger(__name__)
 
@@ -47,15 +47,16 @@ async def run_prediction(reader, writer):
                 # generate attention weighted heatmap
                 sentence_ = sentence.split()
                 pred_ = pred.split()
-                weights = w[0, :len(pred_)]
-                f, a = generate_heatmap(weights, sentence_, pred_)
-                fig_id = save_figure(f)
-            pred = pred + '\t' + str(fig_id)
+                # weights = w[0, :len(pred_)]
+                # f, a = generate_heatmap(weights, sentence_, pred_)
+                # fig_id = save_figure(f)
+                fig_id = 0
+            pred_out = pred + '\t' + str(fig_id)
 
     except Exception as e:
         log.error(e)
         # send error code
-        pred = '<e>\t0'
+        pred_out = '<e>\t0'
         log.error('Could not store predict history')
         kwargs = {
             'log_text': str(e),
@@ -72,23 +73,24 @@ async def run_prediction(reader, writer):
     finally:
         # save the result
         filename = os.path.basename(filepath)
-        img = Image(filename=filename)
-        img.save()
+        img = Image.query().filter_by(filename=filename).first()
+        pred_id = None
         q = Question(question=sentence)
         q.save()
 
         if kwargs.get('log_type') == 'success':
             pred_log = PredictionScore(prediction=pred)
             pred_log.save()
+            pred_id = pred_log.id
 
         log_model = RequestLog(image_id=img.id,
                                question_id=q.id,
                                fig_id=fig_id,
-                               score_id=pred_log.id,
+                               score_id=pred_id,
                                **kwargs)
         log_model.save()
 
-        writer.write(pred.encode())
+        writer.write(pred_out.encode())
         await writer.drain()
         writer.close()
 
