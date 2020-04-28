@@ -9,7 +9,7 @@ import paramiko
 
 from main.settings import Config
 from main.utils.logger import save_log
-from main.orm.models.base import AppLog
+from main.models.base import AppLog
 
 log = logging.getLogger(__name__)
 

@@ -11,10 +11,10 @@ from faker import Faker
 
 from main.settings.test import TestConfig
 from main.orm.db import provide_session, session_scope
-from main.orm.models.base import User
-from main.orm.models.ml import PredictionScore, RequestLog, QuestionType
-from main.orm.models.data import Image, Question
-from main.orm.models.web import Citation, Update
+from main.models.base import User
+from main.models.ml import PredictionScore, RequestLog, QuestionType
+from main.models.data import Image, Question
+from main.models.web import Citation, Update
 
 log = logging.getLogger(__name__)
 
